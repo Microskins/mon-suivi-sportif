@@ -1,0 +1,54 @@
+<div class="onglet-content">
+    <h2>Séances</h2>
+    <form id="seanceForm">
+        <label for="date-seance">Date :</label>
+        <input type="date" id="date-seance" required>
+
+        <label for="type-seance">Type :</label>
+        <select id="type-seance">
+            <option value="musculation">Musculation</option>
+            <option value="cardio">Cardio</option>
+            <option value="hiit">HIIT</option>
+            <option value="yoga">Yoga / Stretching</option>
+            <option value="sport-co">Sport collectif</option>
+            <option value="autre">Autre</option>
+        </select>
+
+        <label for="duree">Durée (min) :</label>
+        <input type="number" id="duree" min="0" placeholder="60">
+
+        <label for="kcal">Kcal brûlées :</label>
+        <input type="number" id="kcal" min="0" placeholder="0">
+
+        <label for="ressenti">Ressenti (1-5) :</label>
+        <select id="ressenti">
+            <option value="1">1 — Très difficile</option>
+            <option value="2">2 — Difficile</option>
+            <option value="3" selected>3 — Normal</option>
+            <option value="4">4 — Bien</option>
+            <option value="5">5 — Excellent</option>
+        </select>
+
+        <label for="exercices">Exercices / Notes :</label>
+        <textarea id="exercices" rows="3" placeholder="Ex: Squat 4x8 @ 100kg, Développé couché 3x10..."></textarea>
+
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    <div id="seanceFeedback"></div>
+
+    <table id="seanceTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Durée (min)</th>
+                <th>Kcal</th>
+                <th>Ressenti</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>

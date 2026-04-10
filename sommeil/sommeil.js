@@ -1,48 +1,61 @@
 document.addEventListener('DOMContentLoaded', function() {
     const sommeilForm = document.getElementById('sommeilForm');
     const sommeilTableBody = document.querySelector('#sommeilTable tbody');
+    const feedbackEl = document.getElementById('sommeilFeedback');
 
-    // Charger et afficher les données de sommeil
-    function loadAndDisplaySommeilData() {
-        const sommeilData = loadData('sommeilData');
+    document.getElementById('date-sommeil').valueAsDate = new Date();
+
+    function renderTable() {
+        const data = loadData('sommeilData');
+        const sorted = [...data].sort((a, b) => b.date.localeCompare(a.date));
         sommeilTableBody.innerHTML = '';
-        sommeilData.forEach(entry => {
+        sorted.forEach((entry) => {
+            const originalIdx = data.indexOf(entry);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${entry.date}</td>
-                <td>${entry.apnee}</td>
-                <td>${entry.rem}</td>
-                <td>${entry.profond}</td>
-                <td>${entry.leger}</td>
-                <td>${entry.tempsTotal}</td>
-                <td>${entry.bpm}</td>
-                <td>${entry.oxygen}</td>
+                <td>${entry.apnee ?? '—'}</td>
+                <td>${entry.rem ?? '—'}</td>
+                <td>${entry.profond ?? '—'}</td>
+                <td>${entry.leger ?? '—'}</td>
+                <td>${entry.tempsTotal ?? '—'}</td>
+                <td>${entry.bpm ?? '—'}</td>
+                <td>${entry.oxygen ?? '—'}</td>
+                <td><button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button></td>
             `;
             sommeilTableBody.appendChild(row);
         });
     }
 
-    // Enregistrement des données de sommeil
-    sommeilForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const sommeilData = {
-            date: document.getElementById('date-sommeil').value,
-            apnee: parseFloat(document.getElementById('apnee').value),
-            rem: parseFloat(document.getElementById('rem').value),
-            profond: parseFloat(document.getElementById('profond').value),
-            leger: parseFloat(document.getElementById('leger').value),
-            tempsTotal: parseFloat(document.getElementById('temps-total').value),
-            bpm: parseFloat(document.getElementById('bpm').value),
-            oxygen: parseFloat(document.getElementById('oxygen').value)
-        };
-        const sommeilEntries = loadData('sommeilData');
-        sommeilEntries.push(sommeilData);
-        saveData('sommeilData', sommeilEntries);
-        loadAndDisplaySommeilData();
-        alert('Données Sommeil enregistrées !');
-        sommeilForm.reset();
+    sommeilTableBody.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('btn-delete')) return;
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        const data = loadData('sommeilData');
+        data.splice(idx, 1);
+        saveData('sommeilData', data);
+        renderTable();
     });
 
-    // Charger les données de sommeil au démarrage
-    loadAndDisplaySommeilData();
+    sommeilForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const entry = {
+            date: document.getElementById('date-sommeil').value,
+            apnee: parseFloat(document.getElementById('apnee').value) || 0,
+            rem: parseFloat(document.getElementById('rem').value) || 0,
+            profond: parseFloat(document.getElementById('profond').value) || 0,
+            leger: parseFloat(document.getElementById('leger').value) || 0,
+            tempsTotal: parseFloat(document.getElementById('temps-total').value) || 0,
+            bpm: parseFloat(document.getElementById('bpm').value) || 0,
+            oxygen: parseFloat(document.getElementById('oxygen').value) || 0
+        };
+        const data = loadData('sommeilData');
+        data.push(entry);
+        saveData('sommeilData', data);
+        renderTable();
+        sommeilForm.reset();
+        document.getElementById('date-sommeil').valueAsDate = new Date();
+        showFeedback(feedbackEl, 'Nuit enregistrée !');
+    });
+
+    renderTable();
 });

@@ -1,103 +1,140 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Gestion des onglets
+// ============================================================
+//  SCRIPT.JS — Onglets + graphique récapitulatif + utilitaires
+//  Tout le HTML est inline dans index.html (pas de fetch)
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Gestion des onglets ──────────────────────────────────
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
 
     tabButtons.forEach(button => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             const tabId = button.getAttribute('data-tab');
 
-            // Masquer tous les onglets et désactiver les boutons
-            tabContents.forEach(content => content.classList.remove('active'));
-            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            tabButtons.forEach(b => b.classList.remove('active'));
 
-            // Afficher l'onglet sélectionné et activer le bouton
-            const tabContent = document.getElementById(tabId);
-            tabContent.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
             button.classList.add('active');
 
-            // Charger dynamiquement le contenu de l'onglet si ce n'est pas l'accueil
-            if (tabId !== 'accueil' && !tabContent.querySelector('.onglet-content')) {
-                const response = await fetch(`${tabId}/${tabId}.html`);
-                const html = await response.text();
-                tabContent.innerHTML = html;
-
-                // Charger le script JS associé à l'onglet
-                const script = document.createElement('script');
-                script.src = `${tabId}/${tabId}.js`;
-                tabContent.appendChild(script);
-            }
+            if (tabId === 'accueil') updateRecapChart();
         });
     });
 
-    // Charger le graphique récapitulatif
-    updateRecapChart();
+    // ── Graphique récapitulatif ──────────────────────────────
+    let recapChart = null;
 
-    // Fonction pour mettre à jour le graphique récapitulatif
     function updateRecapChart() {
-        const ctx = document.getElementById('recapChart').getContext('2d');
+        const wrapper = document.getElementById('recapChartWrapper');
+        const sommeilData  = JSON.parse(localStorage.getItem('sommeilData'))  || [];
+        const repasData    = JSON.parse(localStorage.getItem('repasData'))    || [];
+        const seanceData   = JSON.parse(localStorage.getItem('seanceData'))   || [];
+        const bodyHistory  = JSON.parse(localStorage.getItem('bodyHistory'))  || [];
 
-        // Récupérer les données depuis localStorage
-        const sommeilData = JSON.parse(localStorage.getItem('sommeilData')) || [];
-        const repasData = JSON.parse(localStorage.getItem('repasData')) || [];
-        const seanceData = JSON.parse(localStorage.getItem('seanceData')) || [];
-        const bodyData = JSON.parse(localStorage.getItem('bodyData')) || {};
-
-        // Préparer les données pour le graphique
-        const dates = [...new Set([
+        const dateSet = new Set([
             ...sommeilData.map(s => s.date),
             ...repasData.map(r => r.date),
-            ...seanceData.map(s => s.date)
-        ])].sort();
+            ...seanceData.map(s => s.date),
+            ...bodyHistory.map(b => b.date)
+        ]);
+        const dates = [...dateSet].sort();
+
+        if (dates.length === 0) {
+            if (recapChart) { recapChart.destroy(); recapChart = null; }
+            wrapper.innerHTML = '<p style="text-align:center;color:#888;padding:40px">Aucune donnée à afficher. Commencez par saisir des données dans les onglets.</p>';
+            return;
+        }
+
+        // Recréer le canvas si nécessaire
+        if (!wrapper.querySelector('canvas')) {
+            wrapper.innerHTML = '<canvas id="recapChart"></canvas>';
+        }
+        const ctx = document.getElementById('recapChart').getContext('2d');
 
         const kcalData = dates.map(date => {
-            const repas = repasData.find(r => r.date === date);
-            const cardio = seanceData.find(s => s.type === 'cardio' && s.date === date);
-            const kcalRepas = repas ? parseInt(repas.calories) || 0 : 0;
-            const kcalCardio = cardio ? parseInt(cardio.kcal) || 0 : 0;
-            return kcalRepas - kcalCardio;
+            const kcalRepas    = repasData.filter(r => r.date === date).reduce((s, r) => s + (r.calories || 0), 0);
+            const kcalBrulees  = seanceData.filter(s => s.date === date).reduce((s, r) => s + (r.kcal || 0), 0);
+            return kcalRepas - kcalBrulees;
         });
 
-        const poidsData = dates.map(() => bodyData.poids || 111);
+        const poidsData = dates.map(date => {
+            const entry = [...bodyHistory].reverse().find(b => b.date <= date);
+            return entry ? entry.poids : null;
+        });
 
-        new Chart(ctx, {
+        const sommeilHeures = dates.map(date => {
+            const s = sommeilData.find(s => s.date === date);
+            return s?.tempsTotal ? Math.round((s.tempsTotal / 60) * 10) / 10 : null;
+        });
+
+        if (recapChart) recapChart.destroy();
+
+        recapChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: dates,
                 datasets: [
                     {
-                        label: 'Bilan Calorique (kcal)',
+                        label: 'Bilan calorique (kcal)',
                         data: kcalData,
                         borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.3,
+                        yAxisID: 'y'
                     },
                     {
                         label: 'Poids (kg)',
                         data: poidsData,
                         borderColor: 'rgb(255, 99, 132)',
-                        tension: 0.1
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.3,
+                        spanGaps: true,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Sommeil (h)',
+                        data: sommeilHeures,
+                        borderColor: 'rgb(153, 102, 255)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                        tension: 0.3,
+                        spanGaps: true,
+                        yAxisID: 'y2'
                     }
                 ]
             },
             options: {
                 responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top' } },
                 scales: {
-                    y: {
-                        beginAtZero: false
-                    }
+                    y:  { type: 'linear', position: 'left',  title: { display: true, text: 'kcal' } },
+                    y1: { type: 'linear', position: 'right', title: { display: true, text: 'kg' },  grid: { drawOnChartArea: false } },
+                    y2: { display: false }
                 }
             }
         });
     }
 
-    // Fonction pour sauvegarder les données dans localStorage
-    window.saveData = function(key, data) {
+    // ── Utilitaires globaux ──────────────────────────────────
+
+    window.saveData = function (key, data) {
         localStorage.setItem(key, JSON.stringify(data));
-        updateRecapChart(); // Mettre à jour le graphique après sauvegarde
     };
 
-    // Fonction pour charger les données depuis localStorage
-    window.loadData = function(key) {
-        return JSON.parse(localStorage.getItem(key)) || [];
+    window.loadData = function (key) {
+        try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
     };
+
+    window.showFeedback = function (container, message, type = 'success') {
+        const el = document.createElement('div');
+        el.className = `feedback feedback-${type}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    };
+
+    // Initialiser le graphique au démarrage
+    updateRecapChart();
 });
