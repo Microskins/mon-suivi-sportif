@@ -2,14 +2,47 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Suivi Sportif</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Mon Suivi Sportif</h1>
-    <div id="app">
-        <!-- Ici, tu afficheras tes données -->
+    <div class="container">
+        <h1>Mon Suivi Sportif</h1>
+
+        <!-- Onglets -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="accueil">Accueil</button>
+            <button class="tab-button" data-tab="body">Body</button>
+            <button class="tab-button" data-tab="sommeil">Sommeil</button>
+            <button class="tab-button" data-tab="repas">Repas</button>
+            <button class="tab-button" data-tab="seances">Séances</button>
+        </div>
+
+        <!-- Contenu des onglets -->
+        <div class="tab-content active" id="accueil">
+            <h2>Récapitulatif</h2>
+            <canvas id="recapChart" width="800" height="400"></canvas>
+        </div>
+
+        <div class="tab-content" id="body">
+            <!-- Le contenu sera chargé dynamiquement depuis body/body.html -->
+        </div>
+
+        <div class="tab-content" id="sommeil">
+            <!-- Le contenu sera chargé dynamiquement depuis sommeil/sommeil.html -->
+        </div>
+
+        <div class="tab-content" id="repas">
+            <!-- Le contenu sera chargé dynamiquement depuis repas/repas.html -->
+        </div>
+
+        <div class="tab-content" id="seances">
+            <!-- Le contenu sera chargé dynamiquement depuis seances/seances.html -->
+        </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
