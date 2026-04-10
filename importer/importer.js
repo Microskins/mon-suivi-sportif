@@ -9,8 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'https://www.googleapis.com/auth/fitness.body.read',
         'https://www.googleapis.com/auth/fitness.sleep.read',
         'https://www.googleapis.com/auth/fitness.activity.read',
-        'https://www.googleapis.com/auth/fitness.nutrition.read',
-        'https://www.googleapis.com/auth/fitness.oxygen_saturation.read'
+        'https://www.googleapis.com/auth/fitness.nutrition.read'
     ].join(' ');
 
     const GFIT_BASE = 'https://www.googleapis.com/fitness/v1/users/me';
@@ -30,7 +29,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Initialisation ───────────────────────────────────────
 
-    // Vérification protocole file://
+    // ── Panel de diagnostic ──────────────────────────────────
+    const diagEl = document.createElement('div');
+    diagEl.id = 'gfit-diag';
+    diagEl.style.cssText = 'background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-family:monospace';
+    document.getElementById('section-gfit').prepend(diagEl);
+
+    function updateDiag() {
+        const proto  = window.location.protocol;
+        const origin = window.location.origin;
+        const gisLoaded = typeof google !== 'undefined' && !!google.accounts;
+        const clientId  = (localStorage.getItem('gfitClientId') || '').slice(0, 20) || '(non sauvegardé)';
+        diagEl.innerHTML = [
+            `<b>Diagnostic Google Fit</b>`,
+            `🌐 Protocole : <b style="color:${proto==='file:'?'red':'green'}">${proto}</b> ${proto==='file:'?'← PROBLÈME : utilise Live Server':'✓'}`,
+            `📍 Origine : ${origin}`,
+            `📚 Lib GIS chargée : <b style="color:${gisLoaded?'green':'orange'}">${gisLoaded?'oui':'non (chargement en cours...)'}</b>`,
+            `🔑 Client ID : ${clientId}...`,
+            `🔧 tokenClient prêt : <b style="color:${tokenClient?'green':'orange'}">${tokenClient?'oui':'non'}</b>`,
+        ].join('<br>');
+    }
+
+    updateDiag();
+    setInterval(updateDiag, 1000); // rafraîchit chaque seconde
+
     if (window.location.protocol === 'file:') {
         const warn = document.createElement('div');
         warn.className = 'feedback feedback-error';
@@ -135,12 +157,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         if (tokenClient) {
-            // Prêt : ouvrir le popup Google
-            tokenClient.requestAccessToken();
+            try {
+                setGfitStatus('Ouverture du popup Google...', '');
+                tokenClient.requestAccessToken();
+            } catch (e) {
+                setGfitStatus('❌ Erreur : ' + e.message, 'error');
+            }
         } else {
-            // Pas encore prêt : charger et connecter dès que possible
             pendingConnect = true;
-            setGfitStatus('Chargement en cours...', '');
+            setGfitStatus('Initialisation en cours...', '');
             initGoogleAuth(clientId);
         }
     });
@@ -225,52 +250,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!sessions.session?.length) return 0;
 
-        // Récupérer les stages de sommeil
-        const stagesData = await gfitAggregate({
-            aggregateBy: [{ dataTypeName: 'com.google.sleep.segment' }],
-            startTimeMillis: dateToMs(start),
-            endTimeMillis: dateToMs(end) + 86_400_000
-        });
-
-        // Construire une map date → stages
+        // Récupérer les stages de sommeil (optionnel — peut échouer selon la source)
         const stageMap = {};
-        for (const bucket of stagesData.bucket || []) {
-            for (const ds of bucket.dataset || []) {
-                for (const pt of ds.point || []) {
-                    const date = msToDate(parseInt(pt.startTimeNanos) / 1_000_000);
-                    const stageType = pt.value?.[0]?.intVal;
-                    const durationMin = Math.round((parseInt(pt.endTimeNanos) - parseInt(pt.startTimeNanos)) / 60_000_000_000);
-                    if (!stageMap[date]) stageMap[date] = { rem: 0, profond: 0, leger: 0 };
-                    if (stageType === 6) stageMap[date].rem += durationMin;
-                    else if (stageType === 5) stageMap[date].profond += durationMin;
-                    else if (stageType === 4) stageMap[date].leger += durationMin;
+        try {
+            const stagesData = await gfitAggregate({
+                aggregateBy: [{ dataTypeName: 'com.google.sleep.segment' }],
+                startTimeMillis: dateToMs(start),
+                endTimeMillis: dateToMs(end) + 86_400_000
+            });
+            for (const bucket of stagesData.bucket || []) {
+                for (const ds of bucket.dataset || []) {
+                    for (const pt of ds.point || []) {
+                        const date = msToDate(parseInt(pt.startTimeNanos) / 1_000_000);
+                        const stageType = pt.value?.[0]?.intVal;
+                        const durationMin = Math.round((parseInt(pt.endTimeNanos) - parseInt(pt.startTimeNanos)) / 60_000_000_000);
+                        if (!stageMap[date]) stageMap[date] = { rem: 0, profond: 0, leger: 0 };
+                        if (stageType === 6) stageMap[date].rem += durationMin;
+                        else if (stageType === 5) stageMap[date].profond += durationMin;
+                        else if (stageType === 4) stageMap[date].leger += durationMin;
+                    }
                 }
             }
-        }
+        } catch (_) { /* stages non disponibles pour cette source */ }
 
-        // Récupérer fréquence cardiaque + SpO2
-        const bioData = await gfitAggregate({
-            aggregateBy: [
-                { dataTypeName: 'com.google.heart_rate.bpm' },
-                { dataTypeName: 'com.google.oxygen_saturation' }
-            ],
-            bucketByTime: { durationMillis: 86_400_000 },
-            startTimeMillis: dateToMs(start),
-            endTimeMillis: dateToMs(end) + 86_400_000
-        });
-
+        // Récupérer la fréquence cardiaque (optionnel)
         const bioMap = {};
-        for (const bucket of bioData.bucket || []) {
-            const date = msToDate(parseInt(bucket.startTimeMillis));
-            bioMap[date] = { bpm: 0, oxygen: 0 };
-            for (const ds of bucket.dataset || []) {
-                for (const pt of ds.point || []) {
-                    const type = ds.dataSourceId?.includes('heart_rate') ? 'bpm' : 'oxygen';
-                    const val = pt.value?.[0]?.fpVal || pt.value?.[0]?.intVal;
-                    if (val) bioMap[date][type] = Math.round(val);
+        try {
+            const bioData = await gfitAggregate({
+                aggregateBy: [{ dataTypeName: 'com.google.heart_rate.bpm' }],
+                bucketByTime: { durationMillis: 86_400_000 },
+                startTimeMillis: dateToMs(start),
+                endTimeMillis: dateToMs(end) + 86_400_000
+            });
+            for (const bucket of bioData.bucket || []) {
+                const date = msToDate(parseInt(bucket.startTimeMillis));
+                bioMap[date] = { bpm: 0 };
+                for (const ds of bucket.dataset || []) {
+                    for (const pt of ds.point || []) {
+                        const val = pt.value?.[0]?.fpVal;
+                        if (val) bioMap[date].bpm = Math.round(val);
+                    }
                 }
             }
-        }
+        } catch (_) { /* BPM non disponible */ }
 
         const sommeilData = loadData('sommeilData');
         let count = 0;
@@ -291,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 leger: stages.leger || 0,
                 tempsTotal: durMin,
                 bpm: bio.bpm || 0,
-                oxygen: bio.oxygen || 0
+                oxygen: 0
             });
             count++;
         }
@@ -417,6 +439,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 resultEl.textContent = count > 0
                     ? `✓ ${count} entrée(s) importée(s) avec succès`
                     : 'Aucune nouvelle donnée trouvée pour cette période';
+                if (count > 0) window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
             } catch (e) {
                 resultEl.className = 'gfit-result error';
                 resultEl.textContent = `Erreur : ${e.message}`;
@@ -479,6 +502,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('csv-preview').style.display = 'none';
             rawFileContent = null;
             fileInput.value = '';
+            if (count > 0) window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
         } catch (e) {
             resultEl.className = 'gfit-result error';
             resultEl.textContent = `Erreur : ${e.message}`;
@@ -758,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function () {
             repasData: loadData('repasData'),
             seanceData: loadData('seanceData')
         };
-        downloadFile(JSON.stringify(payload, null, 2), `suivi-sportif-${today()}.json`, 'application/json');
+        downloadFile(JSON.stringify(payload, null, 2), `suivi-sportif-${todayStr()}.json`, 'application/json');
     }
 
     function exportCSV(key, fields, name) {
@@ -766,7 +790,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!data.length) { alert('Aucune donnée à exporter'); return; }
         const header = fields.join(',');
         const rows = data.map(r => fields.map(f => `"${(r[f] ?? '').toString().replace(/"/g, '""')}"`).join(','));
-        downloadFile([header, ...rows].join('\n'), `${name}-${today()}.csv`, 'text/csv');
+        downloadFile([header, ...rows].join('\n'), `${name}-${todayStr()}.csv`, 'text/csv');
     }
 
     function downloadFile(content, filename, mime) {
@@ -777,7 +801,7 @@ document.addEventListener('DOMContentLoaded', function () {
         URL.revokeObjectURL(a.href);
     }
 
-    function today() {
+    function todayStr() {
         return new Date().toISOString().split('T')[0];
     }
 });

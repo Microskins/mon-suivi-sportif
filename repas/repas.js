@@ -45,7 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${entry.proteines || 0}</td>
                 <td>${entry.glucides || 0}</td>
                 <td>${entry.lipides || 0}</td>
-                <td><button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button></td>
+                <td class="actions-cell">
+                    <button class="btn-edit"   data-index="${originalIdx}" title="Modifier">✎</button>
+                    <button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button>
+                </td>
             `;
             tableBody.appendChild(row);
         });
@@ -53,12 +56,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     tableBody.addEventListener('click', function(e) {
-        if (!e.target.classList.contains('btn-delete')) return;
         const idx = parseInt(e.target.getAttribute('data-index'));
         const data = loadData('repasData');
-        data.splice(idx, 1);
-        saveData('repasData', data);
-        renderTable();
+
+        if (e.target.classList.contains('btn-delete')) {
+            data.splice(idx, 1);
+            saveData('repasData', data);
+            renderTable();
+        }
+
+        if (e.target.classList.contains('btn-edit')) {
+            openModal({
+                title: 'Modifier le repas',
+                fields: [
+                    { key: 'date',      label: 'Date',           type: 'date' },
+                    { key: 'type',      label: 'Type',           type: 'select', options: [['petit-dejeuner','Petit-déjeuner'],['dejeuner','Déjeuner'],['diner','Dîner'],['collation','Collation']] },
+                    { key: 'aliments',  label: 'Aliments',       type: 'textarea' },
+                    { key: 'calories',  label: 'Calories (kcal)', type: 'number', min: 0 },
+                    { key: 'proteines', label: 'Protéines (g)',   type: 'number', min: 0 },
+                    { key: 'glucides',  label: 'Glucides (g)',    type: 'number', min: 0 },
+                    { key: 'lipides',   label: 'Lipides (g)',     type: 'number', min: 0 },
+                ],
+                values: data[idx],
+                onSave: (vals) => {
+                    data[idx] = { ...data[idx], ...vals, calories: parseFloat(vals.calories)||0, proteines: parseFloat(vals.proteines)||0, glucides: parseFloat(vals.glucides)||0, lipides: parseFloat(vals.lipides)||0 };
+                    saveData('repasData', data);
+                    renderTable();
+                    showFeedback(feedbackEl, 'Repas modifié !');
+                }
+            });
+        }
     });
 
     repasForm.addEventListener('submit', function(e) {
@@ -82,4 +109,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     renderTable();
+    window.addEventListener('suivi:dataChanged', renderTable);
 });

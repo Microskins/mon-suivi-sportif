@@ -57,19 +57,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${entry.poids}</td>
                 <td>${entry.tourTaille || '—'}</td>
                 <td>${imc}</td>
-                <td><button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button></td>
+                <td class="actions-cell">
+                    <button class="btn-edit"   data-index="${originalIdx}" title="Modifier">✎</button>
+                    <button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button>
+                </td>
             `;
             historyBody.appendChild(row);
         });
     }
 
     historyBody.addEventListener('click', function(e) {
-        if (!e.target.classList.contains('btn-delete')) return;
         const idx = parseInt(e.target.getAttribute('data-index'));
         const history = loadData('bodyHistory');
-        history.splice(idx, 1);
-        saveData('bodyHistory', history);
-        renderHistory();
+
+        if (e.target.classList.contains('btn-delete')) {
+            history.splice(idx, 1);
+            saveData('bodyHistory', history);
+            renderHistory();
+        }
+
+        if (e.target.classList.contains('btn-edit')) {
+            openModal({
+                title: 'Modifier la mesure corporelle',
+                fields: [
+                    { key: 'date',       label: 'Date',              type: 'date'   },
+                    { key: 'poids',      label: 'Poids (kg)',         type: 'number', step: 0.1, min: 0 },
+                    { key: 'tourTaille', label: 'Tour de taille (cm)', type: 'number', step: 0.1, min: 0 },
+                ],
+                values: history[idx],
+                onSave: (vals) => {
+                    history[idx] = { ...history[idx], date: vals.date, poids: parseFloat(vals.poids) || 0, tourTaille: parseFloat(vals.tourTaille) || 0 };
+                    saveData('bodyHistory', history);
+                    renderHistory();
+                    showFeedback(feedbackEl, 'Mesure modifiée !');
+                }
+            });
+        }
     });
 
     bodyForm.addEventListener('submit', function(e) {
@@ -109,4 +132,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
     renderDisplay();
     renderHistory();
+    window.addEventListener('suivi:dataChanged', () => { renderDisplay(); renderHistory(); });
 });

@@ -137,4 +137,69 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialiser le graphique au démarrage
     updateRecapChart();
+
+    // ── Modale d'édition globale ─────────────────────────────
+    // Utilisation : openModal({ title, fields, values, onSave })
+    // fields : [{ key, label, type, options }]
+    // values : { key: value, ... }
+    // onSave : function(newValues) appelée avec les valeurs modifiées
+
+    const modal       = document.getElementById('editModal');
+    const modalTitle  = document.getElementById('modalTitle');
+    const modalForm   = document.getElementById('modalForm');
+    const modalSave   = document.getElementById('modalSave');
+    const modalCancel = document.getElementById('modalCancel');
+
+    window.openModal = function ({ title, fields, values, onSave }) {
+        modalTitle.textContent = title;
+        modalForm.innerHTML = '';
+
+        fields.forEach(f => {
+            const label = document.createElement('label');
+            label.textContent = f.label;
+            label.setAttribute('for', `modal_${f.key}`);
+
+            let input;
+            if (f.type === 'select') {
+                input = document.createElement('select');
+                (f.options || []).forEach(([val, txt]) => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = txt;
+                    if (String(values[f.key]) === String(val)) opt.selected = true;
+                    input.appendChild(opt);
+                });
+            } else if (f.type === 'textarea') {
+                input = document.createElement('textarea');
+                input.rows = 3;
+                input.value = values[f.key] ?? '';
+            } else {
+                input = document.createElement('input');
+                input.type = f.type || 'text';
+                input.value = values[f.key] ?? '';
+                if (f.step) input.step = f.step;
+                if (f.min !== undefined) input.min = f.min;
+                if (f.max !== undefined) input.max = f.max;
+            }
+            input.id = `modal_${f.key}`;
+
+            modalForm.appendChild(label);
+            modalForm.appendChild(input);
+        });
+
+        modal.style.display = 'flex';
+
+        modalSave.onclick = () => {
+            const result = {};
+            fields.forEach(f => {
+                const el = document.getElementById(`modal_${f.key}`);
+                result[f.key] = (f.type === 'number') ? (parseFloat(el.value) || 0) : el.value;
+            });
+            onSave(result);
+            modal.style.display = 'none';
+        };
+
+        modalCancel.onclick = () => { modal.style.display = 'none'; };
+        modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; }, { once: true });
+    };
 });

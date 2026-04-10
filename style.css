@@ -177,6 +177,8 @@ tr:hover td { background-color: #f7fafc; }
 
 .btn-delete:hover { background: #e53e3e; color: white; }
 
+.actions-cell { display: flex; gap: 4px; align-items: center; }
+
 /* ====== Feedback messages ====== */
 .feedback {
     padding: 10px 16px;
@@ -254,6 +256,68 @@ p.error {
     border-radius: 6px;
     padding: 12px 16px;
 }
+
+/* ====== Modale d'édition ====== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-box h3 {
+    margin: 0 0 20px;
+    font-size: 1.1rem;
+    color: #1a2940;
+}
+
+#modalForm {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 10px 16px;
+    align-items: center;
+    border: none;
+    padding: 0;
+    margin-bottom: 20px;
+    box-shadow: none;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-edit {
+    background: none;
+    border: 1px solid #a0aec0;
+    color: #4a5568;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    transition: background 0.15s, color 0.15s;
+    grid-column: unset;
+    width: auto;
+    font-weight: normal;
+}
+.btn-edit:hover { background: #4a5568; color: white; }
 
 /* ====== Import / Export ====== */
 .import-section {

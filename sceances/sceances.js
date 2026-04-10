@@ -30,19 +30,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${entry.kcal || '—'}</td>
                 <td title="${entry.ressenti}/5">${ressentiLabels[entry.ressenti] || entry.ressenti}</td>
                 <td class="notes-cell">${entry.exercices || '—'}</td>
-                <td><button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button></td>
+                <td class="actions-cell">
+                    <button class="btn-edit"   data-index="${originalIdx}" title="Modifier">✎</button>
+                    <button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button>
+                </td>
             `;
             tableBody.appendChild(row);
         });
     }
 
     tableBody.addEventListener('click', function(e) {
-        if (!e.target.classList.contains('btn-delete')) return;
         const idx = parseInt(e.target.getAttribute('data-index'));
         const data = loadData('seanceData');
-        data.splice(idx, 1);
-        saveData('seanceData', data);
-        renderTable();
+
+        if (e.target.classList.contains('btn-delete')) {
+            data.splice(idx, 1);
+            saveData('seanceData', data);
+            renderTable();
+        }
+
+        if (e.target.classList.contains('btn-edit')) {
+            openModal({
+                title: 'Modifier la séance',
+                fields: [
+                    { key: 'date',      label: 'Date',             type: 'date' },
+                    { key: 'type',      label: 'Type',             type: 'select', options: [['musculation','Musculation'],['cardio','Cardio'],['hiit','HIIT'],['yoga','Yoga / Stretching'],['sport-co','Sport collectif'],['autre','Autre']] },
+                    { key: 'duree',     label: 'Durée (min)',       type: 'number', min: 0 },
+                    { key: 'kcal',      label: 'Kcal brûlées',      type: 'number', min: 0 },
+                    { key: 'ressenti',  label: 'Ressenti (1-5)',     type: 'select', options: [['1','1 — Très difficile'],['2','2 — Difficile'],['3','3 — Normal'],['4','4 — Bien'],['5','5 — Excellent']] },
+                    { key: 'exercices', label: 'Exercices / Notes', type: 'textarea' },
+                ],
+                values: data[idx],
+                onSave: (vals) => {
+                    data[idx] = { ...data[idx], ...vals, duree: parseFloat(vals.duree)||0, kcal: parseFloat(vals.kcal)||0, ressenti: parseInt(vals.ressenti)||3 };
+                    saveData('seanceData', data);
+                    renderTable();
+                    showFeedback(feedbackEl, 'Séance modifiée !');
+                }
+            });
+        }
     });
 
     seanceForm.addEventListener('submit', function(e) {
@@ -66,4 +92,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     renderTable();
+    window.addEventListener('suivi:dataChanged', renderTable);
 });
