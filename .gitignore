@@ -2,3 +2,5 @@ client-OAuth.json
 node_modules/
 server-data/
 package-lock.json
+ecosystem.config.js
+.env
