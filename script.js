@@ -464,6 +464,14 @@ document.addEventListener('DOMContentLoaded', function () {
             exp.addEventListener('mouseleave', () => exp.style.color = 'var(--text-3)');
             exp.addEventListener('click', (e) => { e.stopPropagation(); exportProfileData(p.id); });
 
+            const push = document.createElement('button');
+            push.title = 'Envoyer vers le serveur';
+            push.style.cssText = btnStyle;
+            push.textContent = '☁️';
+            push.addEventListener('mouseenter', () => push.style.color = 'var(--primary)');
+            push.addEventListener('mouseleave', () => push.style.color = 'var(--text-3)');
+            push.addEventListener('click', (e) => { e.stopPropagation(); closeProfileDropdown(); pushProfileToServer(p.id); });
+
             const cfg = document.createElement('button');
             cfg.title = 'Gérer le PIN';
             cfg.style.cssText = btnStyle;
@@ -474,9 +482,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
             row.appendChild(btn);
             row.appendChild(exp);
+            row.appendChild(push);
             row.appendChild(cfg);
             list.appendChild(row);
         });
+    }
+
+    async function pushProfileToServer(profileId) {
+        const token = localStorage.getItem('serverToken');
+        if (!token) {
+            openInfoModal('Serveur non configuré', '<p>Configure d\'abord le token serveur via le bouton <strong>Serveur</strong> en haut à droite.</p>');
+            return;
+        }
+        if (getCurrentProfileId() === profileId) flushToProfile(profileId);
+        let ok = 0, fail = 0;
+        for (const key of PROFILE_DATA_KEYS) {
+            const raw = localStorage.getItem(`profile_${profileId}_${key}`);
+            if (raw === null) continue;
+            try {
+                const res = await fetch(`/api/${profileId}/${key}`, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-token': token },
+                    body:    raw
+                });
+                res.ok ? ok++ : fail++;
+            } catch (_) { fail++; }
+        }
+        updateServerStatus(fail === 0);
+        openInfoModal('Envoi vers le serveur', fail === 0
+            ? `<p>✓ ${ok} clé(s) envoyée(s) avec succès.</p>`
+            : `<p>⚠️ ${ok} réussie(s), ${fail} échouée(s). Vérifie le token et la connexion.</p>`
+        );
     }
 
     function managePin(profileId) {
