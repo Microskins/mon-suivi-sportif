@@ -14,7 +14,7 @@ const PORT     = process.env.PORT  || 3001;
 const TOKEN    = process.env.TOKEN || 'changeme';
 const DATA_DIR = path.join(__dirname, 'server-data');
 
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '5mb', strict: false }));
 
 // ── Authentification ─────────────────────────────────────────────────────────
 app.use('/api', (req, res, next) => {
