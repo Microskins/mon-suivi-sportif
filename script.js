@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Utilitaires globaux ──────────────────────────────────
 
-    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport'];
+    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData'];
 
     function getProfiles()         { return JSON.parse(localStorage.getItem('profiles') || '[]'); }
     function getCurrentProfileId() { return localStorage.getItem('currentProfileId') || null; }
@@ -292,11 +292,11 @@ document.addEventListener('DOMContentLoaded', function () {
         syncFromServer(id);
     }
 
-    function createProfile(name, emoji, pin) {
+    function createProfile(name, emoji, pin, sexe) {
         const profiles = getProfiles();
         const id = 'p_' + Date.now();
         const isFirst = profiles.length === 0;
-        profiles.push({ id, name, emoji, pin: pin || null, createdAt: new Date().toISOString() });
+        profiles.push({ id, name, emoji, pin: pin || null, sexe: sexe || 'homme', createdAt: new Date().toISOString() });
         localStorage.setItem('profiles', JSON.stringify(profiles));
         if (isFirst) {
             PROFILE_DATA_KEYS.forEach(key => {
@@ -474,12 +474,12 @@ document.addEventListener('DOMContentLoaded', function () {
             push.addEventListener('click', (e) => { e.stopPropagation(); closeProfileDropdown(); pushProfileToServer(p.id); });
 
             const cfg = document.createElement('button');
-            cfg.title = 'Gérer le PIN';
+            cfg.title = 'Modifier le profil';
             cfg.style.cssText = btnStyle;
             cfg.textContent = '⚙';
             cfg.addEventListener('mouseenter', () => cfg.style.color = 'var(--primary)');
             cfg.addEventListener('mouseleave', () => cfg.style.color = 'var(--text-3)');
-            cfg.addEventListener('click', (e) => { e.stopPropagation(); closeProfileDropdown(); managePin(p.id); });
+            cfg.addEventListener('click', (e) => { e.stopPropagation(); closeProfileDropdown(); editProfile(p.id); });
 
             row.appendChild(btn);
             row.appendChild(exp);
@@ -559,14 +559,50 @@ document.addEventListener('DOMContentLoaded', function () {
                     ['🚴','🚴 Cycliste'], ['🏊','🏊 Nageur'], ['⚽','⚽ Football'],
                     ['🎯','🎯 Objectif'], ['🌟','🌟 Star'], ['👤','👤 Défaut']
                 ]},
+                { key: 'sexe', label: 'Sexe', type: 'select', options: [['homme', 'Homme'], ['femme', 'Femme']] },
                 { key: 'pin', label: 'PIN (optionnel — 4 chiffres)', type: 'number', min: 0, placeholder: 'Laisser vide = sans PIN' },
             ],
-            values: { name: '', emoji: '🏃', pin: '' },
+            values: { name: '', emoji: '🏃', sexe: 'homme', pin: '' },
             onSave: (vals) => {
                 if (!vals.name.trim()) return;
                 const raw = String(vals.pin || '').trim();
                 const pin = raw && /^\d{4}$/.test(raw) ? raw : null;
-                createProfile(vals.name.trim(), vals.emoji || '👤', pin);
+                createProfile(vals.name.trim(), vals.emoji || '👤', pin, vals.sexe || 'homme');
+            }
+        });
+    }
+
+    function editProfile(profileId) {
+        const profiles = getProfiles();
+        const idx = profiles.findIndex(p => p.id === profileId);
+        if (idx < 0) return;
+        const profile = profiles[idx];
+        openModal({
+            title: `${profile.emoji} Modifier le profil`,
+            fields: [
+                { key: 'name',  label: 'Prénom', type: 'text', placeholder: 'Ex: Thomas' },
+                { key: 'emoji', label: 'Avatar', type: 'select', options: [
+                    ['🏃','🏃 Coureur'], ['🧘','🧘 Yoga'], ['💪','💪 Muscu'],
+                    ['🚴','🚴 Cycliste'], ['🏊','🏊 Nageur'], ['⚽','⚽ Football'],
+                    ['🎯','🎯 Objectif'], ['🌟','🌟 Star'], ['👤','👤 Défaut']
+                ]},
+                { key: 'sexe', label: 'Sexe', type: 'select', options: [['homme', 'Homme'], ['femme', 'Femme']] },
+                { key: 'pin', label: 'PIN (4 chiffres — vide = inchangé, "0" = supprimer)', type: 'number', min: 0, placeholder: '1234' },
+            ],
+            values: { name: profile.name, emoji: profile.emoji, sexe: profile.sexe || 'homme', pin: '' },
+            onSave: (vals) => {
+                const fresh = getProfiles();
+                const i = fresh.findIndex(p => p.id === profileId);
+                if (i < 0) return;
+                fresh[i].name  = vals.name.trim() || fresh[i].name;
+                fresh[i].emoji = vals.emoji || fresh[i].emoji;
+                fresh[i].sexe  = vals.sexe || 'homme';
+                const raw = String(vals.pin || '').trim();
+                if (raw === '0') fresh[i].pin = null;
+                else if (/^\d{4}$/.test(raw)) fresh[i].pin = raw;
+                localStorage.setItem('profiles', JSON.stringify(fresh));
+                renderProfileUI();
+                window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
             }
         });
     }

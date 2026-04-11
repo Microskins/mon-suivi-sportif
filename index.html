@@ -66,38 +66,158 @@
         <div class="tab-content" id="body">
             <div class="onglet-content">
                 <h2>Body</h2>
-                <form id="bodyForm">
-                    <label for="date-body">Date :</label>
-                    <input type="date" id="date-body" required>
+                <div class="body-two-col">
+                    <!-- Colonne gauche : formulaire -->
+                    <div>
+                        <form id="bodyForm">
+                            <label for="date-body">Date :</label>
+                            <input type="date" id="date-body" required>
 
-                    <label for="poids">Poids (kg) :</label>
-                    <input type="number" id="poids" step="0.1" min="0" required>
+                            <label for="poids">Poids (kg) :</label>
+                            <input type="number" id="poids" step="0.1" min="0" required>
 
-                    <label for="tour-taille">Tour de taille (cm) :</label>
-                    <input type="number" id="tour-taille" step="0.1" min="0">
+<label for="taille">Taille (cm) :</label>
+                            <input type="number" id="taille" step="0.1" min="0" required>
 
-                    <label for="taille">Taille (cm) :</label>
-                    <input type="number" id="taille" step="0.1" min="0" required>
+                            <label for="age">Date de naissance :</label>
+                            <input type="date" id="age" required>
 
-                    <label for="age">Date de naissance :</label>
-                    <input type="date" id="age" required>
+                            <button type="submit">Enregistrer</button>
+                        </form>
+                        <div id="bodyFeedback"></div>
+                        <div id="bodyDataDisplay"></div>
+                    </div>
 
-                    <button type="submit">Enregistrer</button>
-                </form>
-                <div id="bodyFeedback"></div>
-                <div id="bodyDataDisplay"></div>
+                    <!-- Colonne droite : silhouette + mensurations -->
+                    <div class="mensuration-panel">
+                        <div class="mensuration-top">
+                            <h3>Mensurations</h3>
+                            <div class="mensuration-date-row">
+                                <label for="date-mensuration">Date</label>
+                                <input type="date" id="date-mensuration">
+                            </div>
+                        </div>
+                        <div class="mensuration-figure-wrap">
+                            <svg class="body-figure" viewBox="0 0 120 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Head -->
+                                <ellipse cx="60" cy="18" rx="14" ry="16" stroke="currentColor" stroke-width="2"/>
+                                <!-- Neck -->
+                                <path d="M53 33 L53 43 M67 33 L67 43" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Shoulder curve -->
+                                <path d="M53 43 Q42 44 18 56 M67 43 Q78 44 102 56" stroke="currentColor" stroke-width="2"/>
+                                <!-- Left upper arm -->
+                                <path d="M18 56 L8 100 Q12 104 18 102 L22 58" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Right upper arm -->
+                                <path d="M102 56 L112 100 Q108 104 102 102 L98 58" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Left forearm -->
+                                <path d="M8 100 L4 142 Q8 146 14 144 L18 102" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Right forearm -->
+                                <path d="M112 100 L116 142 Q112 146 106 144 L102 102" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Torso sides -->
+                                <path d="M22 58 L20 130 M98 58 L100 130" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Body inner lines -->
+                                <path d="M53 43 L48 130 M67 43 L72 130" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Hips -->
+                                <path d="M20 130 Q60 145 100 130 L96 164 Q60 174 24 164 Z" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Thighs -->
+                                <path d="M24 164 L18 230 M48 164 L50 230 M72 164 L70 230 M96 164 L102 230" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Calves -->
+                                <path d="M18 230 L14 268 Q26 275 38 268 L50 230" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M70 230 L82 268 Q94 275 106 268 L102 230" stroke="currentColor" stroke-width="1.5"/>
+                                <!-- Measurement indicators -->
+                                <line x1="50" y1="40" x2="70" y2="40" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="18" y1="56" x2="102" y2="56" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="16" y1="80" x2="104" y2="80" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="6" y1="80" x2="16" y2="80" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="104" y1="80" x2="114" y2="80" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="18" y1="115" x2="102" y2="115" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="4" y1="120" x2="14" y2="120" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="106" y1="120" x2="116" y2="120" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="18" y1="143" x2="102" y2="143" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="18" y1="195" x2="50" y2="195" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="70" y1="195" x2="102" y2="195" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="14" y1="248" x2="38" y2="248" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                                <line x1="82" y1="248" x2="106" y2="248" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>
+                            </svg>
+                        </div>
+                        <div class="mensuration-grid">
+                            <div class="mc-field">
+                                <label>Épaules</label>
+                                <div class="mc-field-input"><input type="number" id="m-epaules" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Cou</label>
+                                <div class="mc-field-input"><input type="number" id="m-cou" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Poitrine</label>
+                                <div class="mc-field-input"><input type="number" id="m-poitrine" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Tour de taille</label>
+                                <div class="mc-field-input"><input type="number" id="m-taille-m" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Hanches</label>
+                                <div class="mc-field-input"><input type="number" id="m-hanches" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Biceps</label>
+                                <div class="mc-field-input"><input type="number" id="m-biceps" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Avant-bras</label>
+                                <div class="mc-field-input"><input type="number" id="m-avantbras" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Cuisses</label>
+                                <div class="mc-field-input"><input type="number" id="m-cuisses" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                            <div class="mc-field">
+                                <label>Mollets</label>
+                                <div class="mc-field-input"><input type="number" id="m-mollets" step="0.1" min="0" placeholder="—"><span>cm</span></div>
+                            </div>
+                        </div>
+                        <button id="saveMensurations" type="button">Enregistrer les mesures</button>
+                        <div id="mensurationFeedback"></div>
+                    </div>
+                </div>
+
+                <!-- Historique poids pleine largeur -->
                 <table id="bodyHistoryTable" style="display:none">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Poids (kg)</th>
-                            <th>Tour de taille (cm)</th>
                             <th>IMC</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
+
+                <!-- Historique mensurations -->
+                <div id="mensurationsHistoryWrap" style="display:none; margin-top:24px; overflow-x:auto">
+                    <h3 style="margin-bottom:12px">Historique des mensurations</h3>
+                    <table id="mensurationsHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Épaules</th>
+                                <th>Cou</th>
+                                <th>Poitrine</th>
+                                <th>Tour taille</th>
+                                <th>Hanches</th>
+                                <th>Biceps</th>
+                                <th>Avant-bras</th>
+                                <th>Cuisses</th>
+                                <th>Mollets</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
