@@ -13,14 +13,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
+      - name: Deploy via SSH with password
         uses: appleboy/ssh-action@master
         with:
           host: mon-suivis-sportif.freeboxos.fr
           username: freebox
-          key: ${{ secrets.DEPLOY_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
           port: 49154
           script: |
             cd /var/www/mon-suivi-sportif
-            git pull origin main
+            git pull origin master
             echo "✅ Déploiement réussi !"
