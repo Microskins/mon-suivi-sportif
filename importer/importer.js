@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', function () {
     let pendingImportCat = null;  // catégorie à importer après connexion manuelle
 
     // ── Guard d'accès ────────────────────────────────────────
+    // Utilise le même flux OAuth que Google Fit (déjà configuré),
+    // puis vérifie l'email via l'endpoint userinfo.
+
+    let guardMode = false; // true = OAuth déclenché pour vérification identité
 
     function isAuthorized() {
         return !!sessionStorage.getItem('importerAuthorized');
@@ -43,58 +47,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setupGuard() {
         if (isAuthorized()) { grantAccess(); return; }
-
         const clientId = localStorage.getItem('gfitClientId');
         if (!clientId) {
-            // Pas encore de Client ID → afficher le formulaire de config
             document.getElementById('guardSetup').open = true;
-            return;
         }
-        loadGISForSignIn(clientId);
+        // Le guard est déjà visible dans le DOM — rien d'autre à faire ici
     }
 
-    function loadGISForSignIn(clientId) {
-        if (typeof google !== 'undefined' && google.accounts?.id) {
-            renderSignInButton(clientId); return;
-        }
-        if (document.querySelector('script[src*="accounts.google.com/gsi"]')) {
-            const wait = setInterval(() => {
-                if (typeof google !== 'undefined' && google.accounts?.id) {
-                    clearInterval(wait); renderSignInButton(clientId);
-                }
-            }, 100);
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true; script.defer = true;
-        script.onload = () => renderSignInButton(clientId);
-        document.head.appendChild(script);
-    }
-
-    function renderSignInButton(clientId) {
+    async function verifyAndGrant() {
         try {
-            google.accounts.id.initialize({
-                client_id: clientId,
-                callback: handleSignInResponse,
-                auto_select: true,
+            const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${gfitToken}` }
             });
-            google.accounts.id.renderButton(
-                document.getElementById('googleSignInBtn'),
-                { theme: 'outline', size: 'large', width: 280, text: 'signin_with' }
-            );
-            google.accounts.id.prompt(); // tente l'auto-sélection silencieuse
-        } catch(e) {
-            document.getElementById('guardError').textContent = '❌ Erreur Google Sign-In : ' + e.message;
-        }
-    }
-
-    function handleSignInResponse(response) {
-        try {
-            // Décoder le JWT sans librairie
-            const b64 = response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-            const payload = JSON.parse(atob(b64));
-            const email = payload.email;
+            if (!r.ok) throw new Error(`userinfo ${r.status}`);
+            const info = await r.json();
+            const email = info.email;
             const adminEmail = localStorage.getItem('adminEmail');
 
             if (!adminEmail) {
@@ -105,12 +72,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 grantAccess();
             } else {
                 document.getElementById('guardError').textContent =
-                    `⛔ Accès refusé — ${email} n'est pas le compte administrateur (${adminEmail}).`;
+                    `⛔ Accès refusé — ${email} n'est pas le compte administrateur.`;
             }
         } catch(e) {
             document.getElementById('guardError').textContent = '❌ Erreur de vérification : ' + e.message;
         }
     }
+
+    // Bouton de connexion dans le guard
+    document.getElementById('guardConnectBtn').addEventListener('click', () => {
+        const clientId = localStorage.getItem('gfitClientId') ||
+                         document.getElementById('guardClientId')?.value.trim();
+        if (!clientId) {
+            document.getElementById('guardSetup').open = true;
+            return;
+        }
+        guardMode = true;
+        document.getElementById('guardError').textContent = '';
+        if (tokenClient) {
+            try { tokenClient.requestAccessToken(); }
+            catch(e) { guardMode = false; document.getElementById('guardError').textContent = '❌ ' + e.message; }
+        } else {
+            pendingConnect = true;
+            initGoogleAuth(clientId);
+        }
+    });
 
     // Formulaire de config du Client ID depuis le guard
     document.getElementById('guardSaveClientId').addEventListener('click', () => {
@@ -118,8 +104,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!id) return;
         localStorage.setItem('gfitClientId', id);
         document.getElementById('gfit-client-id').value = id;
+        document.getElementById('guardSetup').open = false;
         document.getElementById('guardError').textContent = '';
-        loadGISForSignIn(id);
     });
 
     setupGuard();
@@ -212,7 +198,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     gfitToken = resp.access_token;
 
-                    if (autoImportMode) {
+                    if (guardMode) {
+                        guardMode = false;
+                        await verifyAndGrant();
+                    } else if (autoImportMode) {
                         autoImportMode = false;
                         await runAutoImport();
                     } else {
@@ -226,8 +215,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 },
                 error_callback: (err) => {
-                    // Échec silencieux (ex: prompt:none interaction_required)
-                    if (!autoImportMode) setGfitStatus(`❌ ${err.type || 'Erreur'}`, 'error');
+                    if (guardMode) {
+                        guardMode = false;
+                        document.getElementById('guardError').textContent = `❌ Erreur Google : ${err.type || 'inconnue'}`;
+                    } else if (!autoImportMode) {
+                        setGfitStatus(`❌ ${err.type || 'Erreur'}`, 'error');
+                    }
                     autoImportMode = false;
                 }
             });
