@@ -490,7 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function pushProfileToServer(profileId) {
-        const token = localStorage.getItem(`serverToken_${getCurrentProfileId()}`);
+        const token = localStorage.getItem('serverToken');
         if (!token) {
             openInfoModal('Serveur non configuré', '<p>Configure d\'abord le token serveur via le bouton <strong>Serveur</strong> en haut à droite.</p>');
             return;
@@ -559,17 +559,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     ['🚴','🚴 Cycliste'], ['🏊','🏊 Nageur'], ['⚽','⚽ Football'],
                     ['🎯','🎯 Objectif'], ['🌟','🌟 Star'], ['👤','👤 Défaut']
                 ]},
-                { key: 'pin',         label: 'PIN (optionnel — 4 chiffres)',  type: 'number', min: 0, placeholder: 'Laisser vide = sans PIN' },
-                { key: 'serverToken', label: 'Token serveur (optionnel)',      type: 'password', placeholder: 'Laisser vide = données locales uniquement' },
+                { key: 'pin', label: 'PIN (optionnel — 4 chiffres)', type: 'number', min: 0, placeholder: 'Laisser vide = sans PIN' },
             ],
-            values: { name: '', emoji: '🏃', pin: '', serverToken: '' },
+            values: { name: '', emoji: '🏃', pin: '' },
             onSave: (vals) => {
                 if (!vals.name.trim()) return;
                 const raw = String(vals.pin || '').trim();
                 const pin = raw && /^\d{4}$/.test(raw) ? raw : null;
-                const id  = createProfile(vals.name.trim(), vals.emoji || '👤', pin);
-                const tok = String(vals.serverToken || '').trim();
-                if (tok) localStorage.setItem(`serverToken_${id}`, tok);
+                createProfile(vals.name.trim(), vals.emoji || '👤', pin);
             }
         });
     }
@@ -608,13 +605,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateServerStatus(connected) {
         const dot = document.getElementById('serverStatusDot');
-        if (!dot) return;
-        dot.title      = connected ? 'Serveur connecté' : 'Serveur non disponible';
+        const btn = document.getElementById('serverStatusBtn');
+        if (!dot || !btn) return;
+        dot.title            = connected ? 'Serveur connecté' : 'Serveur non disponible';
         dot.style.background = connected ? 'var(--success)' : 'var(--error)';
+        // Cacher si connecté, afficher si erreur ou pas de token
+        const hasToken = !!localStorage.getItem('serverToken');
+        btn.style.display = (!hasToken || !connected) ? '' : 'none';
     }
 
     async function syncToServer(key, data) {
-        const token = localStorage.getItem(`serverToken_${getCurrentProfileId()}`);
+        const token = localStorage.getItem('serverToken');
         const pid   = getCurrentProfileId();
         if (!token || !pid) return;
         try {
@@ -628,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function syncFromServer(pid) {
-        const token = localStorage.getItem(`serverToken_${getCurrentProfileId()}`);
+        const token = localStorage.getItem('serverToken');
         if (!token || !pid) return;
         try {
             const res = await fetch(`/api/${pid}`, { headers: { 'x-token': token } });
@@ -649,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     window.openServerConfig = function () {
-        const current = localStorage.getItem(`serverToken_${getCurrentProfileId()}`) || '';
+        const current = localStorage.getItem('serverToken') || '';
         openModal({
             title: 'Connexion au serveur',
             fields: [
@@ -658,9 +659,8 @@ document.addEventListener('DOMContentLoaded', function () {
             values: { token: current },
             onSave: (vals) => {
                 const t = vals.token.trim();
-                const pid = getCurrentProfileId();
-                if (t) localStorage.setItem(`serverToken_${pid}`, t);
-                else   localStorage.removeItem(`serverToken_${pid}`);
+                if (t) localStorage.setItem('serverToken', t);
+                else   localStorage.removeItem('serverToken');
                 syncFromServer(getCurrentProfileId());
             }
         });
@@ -701,6 +701,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // Sync serveur au démarrage
+    updateServerStatus(false); // état initial — sera mis à jour par syncFromServer
     syncFromServer(getCurrentProfileId());
 
     // Initialiser le graphique au démarrage
