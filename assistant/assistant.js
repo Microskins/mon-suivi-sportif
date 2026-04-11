@@ -157,7 +157,7 @@ ${ctx}`;
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                const msg = err?.error || err?.error?.message || `Erreur ${response.status}`;
+                const msg = err?.error?.message || (typeof err?.error === 'string' ? err.error : null) || `Erreur ${response.status}`;
                 addMessage('error', `Erreur : ${msg}`);
                 conversationHistory.pop();
                 return;
