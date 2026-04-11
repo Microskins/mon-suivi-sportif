@@ -1,125 +1,155 @@
-# Mon Suivi Sportif 🏋️‍♂️
+# Mon Suivi Sportif
 
-**Mon Suivi Sportif** est une application web locale conçue pour t'aider à suivre tes performances physiques, ton sommeil, tes repas et tes séances de sport. Elle te permet de visualiser tes progrès grâce à des graphiques et des tableaux récapitulatifs.
-
----
-
-## 📌 Objectifs du projet
-
-- **Suivre tes données corporelles** (poids, tour de taille, taille, IMC).
-- **Analyser ton sommeil** (apnée, phases REM, sommeil profond/léger, BPM, oxygène sanguin).
-- **Enregistrer tes repas** (calories, protéines, glucides, lipides).
-- **Suivre tes séances de sport** (musculation, cardio) avec calcul automatique des calories brûlées.
-- **Visualiser tes progrès** grâce à un graphique récapitulatif sur la page d'accueil.
+Application web statique de suivi santé et sportif — multi-profils, synchronisation Google Fit, assistant IA intégré.
 
 ---
 
-## 📂 Structure du projet
+## Fonctionnalités
+
+| Module | Ce qu'il fait |
+|---|---|
+| **Body** | Poids, tour de taille, taille, IMC calculé, historique avec graphique |
+| **Sommeil** | Durée totale, phases (profond / REM / léger), IAH, BPM, SpO2, graphique empilé |
+| **Repas** | 4 repas/jour (calories + macros), bilan calorique vs BMR |
+| **Séances** | Durée, type, ressenti, kcal via valeurs MET, historique |
+| **Accueil** | 3 graphiques Chart.js : évolution du poids, phases de sommeil, bilan calorique |
+| **Importer** | Import Google Fit (poids, sommeil, activités) — protégé par compte Google admin |
+| **Assistant IA** | Chatbot Claude Haiku en bulle flottante, contextualisé avec toutes tes données |
+
+---
+
+## Architecture
+
+- **100 % statique** — aucun backend, aucune base de données
+- **Données** stockées dans `localStorage`, isolées par profil
+- **Multi-profils** avec protection par code PIN (4 chiffres)
+- Fonctionne via Live Server (dev) ou serveur HTTP simple (prod)
+
+---
+
+## Structure des fichiers
 
 ```
-/mon-suivi-sportif/
-├── index.html              # Page principale avec les onglets et le graphique récapitulatif
-├── style.css               # Styles CSS communs
-├── script.js               # Logique commune (gestion des onglets, graphique récapitulatif)
+mon-suivi-sportif/
+├── index.html              # Toute la structure HTML (onglets, modals, bulle chat)
+├── style.css               # Design system complet (CSS variables, responsive)
+├── script.js               # Logique principale : profils, PIN, graphiques, utilitaires
+│
 ├── body/
-│   ├── body.html           # Contenu HTML de l'onglet Body
-│   └── body.js             # Logique JS de l'onglet Body
+│   └── body.js             # Onglet données corporelles
 ├── sommeil/
-│   ├── sommeil.html        # Contenu HTML de l'onglet Sommeil
-│   └── sommeil.js          # Logique JS de l'onglet Sommeil
+│   └── sommeil.js          # Onglet sommeil
 ├── repas/
-│   ├── repas.html          # Contenu HTML de l'onglet Repas
-│   └── repas.js            # Logique JS de l'onglet Repas
-└── seances/
-    ├── seances.html        # Contenu HTML de l'onglet Séances
-    └── seances.js          # Logique JS de l'onglet Séances
+│   └── repas.js            # Onglet repas
+├── sceances/
+│   └── sceances.js         # Onglet séances
+├── importer/
+│   └── importer.js         # Import Google Fit + guard OAuth
+├── assistant/
+│   └── assistant.js        # Chatbot Claude Haiku
+│
+├── data/
+│   ├── README.json         # Format de référence pour les fichiers de données
+│   └── profile_{id}.json   # Données initiales par profil (seed au premier chargement)
+│
+└── .github/
+    └── workflows/
+        └── deploy.yml      # Déploiement automatique
 ```
 
 ---
 
-## 🛠 Installation et utilisation
+## Système de profils
 
-### Prérequis
+Chaque profil dispose d'un espace de données totalement isolé.
 
-- Un navigateur web moderne (Chrome, Firefox, Edge, etc.).
-- Un éditeur de code (VS Code, Sublime Text, etc.) pour modifier les fichiers si nécessaire.
+- **Créer un profil** : bouton `+` dans le sélecteur en haut à droite
+- **Changer de profil** : cliquer sur le nom du profil actif → menu déroulant
+- **PIN** : chaque profil peut être protégé par un code à 4 chiffres (clavier numérique ou clavier physique)
+- **Données** : stockées sous les clés `profile_{id}_{clé}` dans localStorage — jamais mélangées entre profils
 
-### Étapes pour utiliser l'application
+### Synchronisation des données initiales
 
-1. **Télécharger le projet** :
-  - Clone ce dépôt ou télécharge les fichiers dans un dossier sur ton ordinateur.
-2. **Ouvrir l'application** :
-  - Ouvre le fichier `index.html` dans ton navigateur (en utilisant un serveur local comme [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) pour éviter les problèmes de CORS).
-3. **Utiliser les onglets** :
-  - **Accueil** : Graphique récapitulatif de tes données (poids, bilan calorique).
-  - **Body** : Enregistre tes données corporelles (poids, tour de taille, taille, âge).
-  - **Sommeil** : Enregistre tes données de sommeil (phases, BPM, oxygène sanguin).
-  - **Repas** : Enregistre tes repas (calories, protéines, glucides, lipides).
-  - **Séances** : Enregistre tes séances de musculation ou de cardio.
+Au premier chargement sur un appareil (localStorage vide), l'app cherche automatiquement un fichier `data/profile_{id}.json` sur le serveur. Si trouvé, les données sont chargées en local — pratique pour récupérer ses données d'un appareil à l'autre après un `git push`.
+
+Pour exporter ses données actuelles vers ce fichier :
+- Ouvrir la console du navigateur
+- Appeler `exportProfileData('p_XXXXX')` (avec l'identifiant du profil)
+- Récupérer le JSON téléchargé et le placer dans `data/`
 
 ---
 
-## 📊 Fonctionnalités par onglet
+## Google Fit — Import & Auto-sync
 
-### **1. Onglet "Body"**
+### Prérequis Google Cloud Console
 
-- **Enregistrer** : Poids, tour de taille, taille, date de naissance.
-- **Afficher** : IMC calculé automatiquement, âge, et toutes les données corporelles.
+1. Créer un projet sur [console.cloud.google.com](https://console.cloud.google.com)
+2. Activer l'API **Fitness API**
+3. Créer des identifiants OAuth 2.0 (type : "Application Web")
+4. Ajouter dans **Origines JavaScript autorisées** :
+   - `http://localhost:5500` (Live Server)
+   - Ton URL de production (ex : `http://mon-suivis-sportif.freeboxos.fr:49152`)
+5. Copier le **Client ID** et le coller dans `importer/importer.js` (variable `CLIENT_ID`)
 
-### **2. Onglet "Sommeil"**
+### Guard admin
 
-- **Enregistrer** : Date, durée des phases de sommeil (REM, profond, léger), apnée, BPM, oxygène sanguin.
-- **Afficher** : Tableau récapitulatif de toutes tes nuits enregistrées.
+L'onglet Importer est protégé : seul le compte Google dont l'adresse correspond à `adminEmail` (définie dans `importer.js`) peut y accéder. Toute autre connexion est rejetée.
 
-### **3. Onglet "Repas"**
+### Auto-sync quotidien
 
-- **Enregistrer** : Date, calories, protéines, glucides, lipides.
-- **Afficher** : Tableau récapitulatif de tous tes repas enregistrés.
+À chaque ouverture de l'app, si un token Google Fit est présent, l'import se déclenche automatiquement depuis la dernière synchronisation jusqu'à aujourd'hui — sans interaction.
 
-### **4. Onglet "Séances"**
-
-- **Enregistrer** :
-  - **Musculation** : Exercice, répétitions, poids.
-  - **Cardio** : Type (tapis/extérieur), temps, vitesse moyenne, distance, calories brûlées (calcul automatique).
-- **Afficher** : Tableau récapitulatif de toutes tes séances.
-
----
-
-## 📈 Graphique récapitulatif
-
-- **Sur la page d'accueil**, un graphique affiche :
-  - **Bilan calorique** (calories consommées - calories brûlées).
-  - **Poids** (en kg).
-- Les données sont mises à jour automatiquement après chaque enregistrement.
+Les données importées couvrent :
+- Poids (`com.google.weight`)
+- Sommeil (`com.google.sleep.segment`)
+- Activités / séances (`com.google.activity.segment`)
 
 ---
 
-## 🔧 Personnalisation
+## Assistant IA (Claude)
 
-- **Ajouter des fonctionnalités** : Tu peux facilement ajouter de nouveaux champs ou graphiques en modifiant les fichiers HTML/JS correspondants.
-- **Exporter/Importer les données** : Les données sont stockées dans `localStorage`. Tu peux les exporter/importer en ajoutant une fonctionnalité dédiée.
+Un chatbot flottant (bulle en bas à droite) répond à des questions sur tes données personnelles.
 
----
+### Configuration
 
-## 💡 Idées d'améliorations futures
+1. Obtenir une clé API sur [console.anthropic.com](https://console.anthropic.com) → API Keys → Create Key
+2. Cliquer sur la bulle 🤖 → saisir la clé (`sk-ant-…`) → "Sauvegarder"
+3. La clé est stockée dans localStorage — elle n'a pas besoin d'être ressaisie
 
-- **Synchronisation avec un serveur** : Pour sauvegarder tes données en ligne.
-- **Notifications** : Rappels pour enregistrer tes données quotidiennement.
-- **Objectifs** : Définir des objectifs (poids, calories, etc.) et suivre tes progrès.
-- **Analyse avancée** : Statistiques et tendances sur le long terme.
+### Fonctionnement
 
----
-
-## 📄 Licence
-
-Ce projet est sous licence **MIT**. Tu es libre de l'utiliser, le modifier et le partager comme tu le souhaites.
+- Modèle : **claude-haiku-4-5** (rapide, économique)
+- Chaque requête inclut en contexte système : poids actuel, historique poids/sommeil/repas/séances
+- Historique de conversation maintenu en mémoire pendant la session uniquement
+- Raccourci : `Enter` pour envoyer, `Shift+Enter` pour un saut de ligne
 
 ---
 
-## 🙌 Remerciements
+## Installation locale (développement)
 
-Merci d'utiliser **Mon Suivi Sportif** ! Si tu as des questions, des suggestions ou des problèmes, n'hésite pas à me contacter.
+```bash
+git clone https://github.com/<ton-compte>/mon-suivi-sportif.git
+cd mon-suivi-sportif
+# Ouvrir index.html avec Live Server (VS Code) ou :
+npx serve .
+```
+
+L'app doit être servie via HTTP (pas `file://`) pour que les appels API Google Fit et Anthropic fonctionnent.
 
 ---
 
-**Bon suivi sportif !** 💪
+## Déploiement production
+
+Le déploiement est automatisé via GitHub Actions (`.github/workflows/deploy.yml`).
+
+L'app tourne actuellement sur un serveur Freebox : `http://mon-suivis-sportif.freeboxos.fr:49152`
+
+---
+
+## Technologies
+
+- **Vanilla JS** — aucune dépendance npm, aucun bundler
+- **Chart.js** (CDN) — graphiques
+- **Google Identity Services** — OAuth 2.0 pour Google Fit
+- **Anthropic API** — Claude Haiku pour le chatbot
+- **CSS custom properties** — design system cohérent (couleur primaire `#6366f1`, police Inter)
