@@ -125,24 +125,107 @@ Un chatbot flottant (bulle en bas à droite) répond à des questions sur tes do
 
 ---
 
-## Installation locale (développement)
+## Installation
 
 ```bash
 git clone https://github.com/<ton-compte>/mon-suivi-sportif.git
 cd mon-suivi-sportif
-# Ouvrir index.html avec Live Server (VS Code) ou :
-npx serve .
+npm install
 ```
 
-L'app doit être servie via HTTP (pas `file://`) pour que les appels API Google Fit et Anthropic fonctionnent.
+### Démarrage
+
+```bash
+# Token personnalisé (recommandé)
+TOKEN=mon-token-secret node server.js
+
+# Ou avec le token par défaut (dev uniquement)
+node server.js
+```
+
+L'app est disponible sur `http://localhost:49152`.
+
+### Configuration du token côté app
+
+1. Ouvrir l'app dans le navigateur
+2. Cliquer sur le bouton **Serveur** en haut à droite
+3. Saisir le même token que celui défini au démarrage du serveur
+4. Le point passe au vert — les données sont synchronisées
+
+Le token est stocké dans localStorage, pas besoin de le ressaisir.
 
 ---
 
-## Déploiement production
+## Déploiement production (Ubuntu + nginx)
 
-Le déploiement est automatisé via GitHub Actions (`.github/workflows/deploy.yml`).
+### 1. Installer Node.js
 
-L'app tourne actuellement sur un serveur Freebox : `http://mon-suivis-sportif.freeboxos.fr:49152`
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
+node -v  # v22.x.x
+```
+
+### 2. Cloner le projet
+
+```bash
+cd /var/www
+git clone https://github.com/<ton-compte>/mon-suivi-sportif.git
+cd mon-suivi-sportif
+npm install
+```
+
+### 3. Installer pm2 et démarrer le serveur
+
+```bash
+npm install -g pm2
+TOKEN=ton-token-secret pm2 start server.js --name mon-suivi-sportif
+pm2 startup systemd   # génère une commande à copier-coller
+pm2 save              # sauvegarde la liste pour le redémarrage auto
+```
+
+### 4. Configurer nginx
+
+Créer `/etc/nginx/sites-available/mon-suivi-sportif` :
+
+```nginx
+server {
+    listen 49152;
+
+    root /var/www/mon-suivi-sportif;
+    index index.html;
+
+    # Fichiers statiques servis directement par nginx
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API proxifiée vers Express
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+```bash
+ln -s /etc/nginx/sites-available/mon-suivi-sportif /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+```
+
+### 5. Mettre à jour
+
+```bash
+cd /var/www/mon-suivi-sportif
+git pull
+pm2 restart mon-suivi-sportif
+```
+
+L'app tourne sur : `http://mon-suivis-sportif.freeboxos.fr:49152`
+
+Le déploiement du code est automatisé via GitHub Actions (`.github/workflows/deploy.yml`).
 
 ---
 

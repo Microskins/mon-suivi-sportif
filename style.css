@@ -95,6 +95,30 @@ h3 {
 }
 .app-header h1 { margin-bottom: 0; }
 
+/* ====== Server Status Button ====== */
+.server-status-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 0.8rem;
+    color: var(--text-2);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+    margin-left: auto;
+}
+.server-status-btn:hover { border-color: var(--primary); color: var(--primary); }
+.server-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-3);
+    flex-shrink: 0;
+    transition: background 0.3s;
+}
+
 /* ====== Profile Switcher ====== */
 .profile-switcher { position: relative; flex-shrink: 0; }
 

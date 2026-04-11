@@ -289,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderProfileUI();
         updateRecapChart();
         window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+        syncFromServer(id);
     }
 
     function createProfile(name, emoji, pin) {
@@ -559,11 +560,75 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ── Sync serveur ─────────────────────────────────────────────────────────
+
+    function updateServerStatus(connected) {
+        const dot = document.getElementById('serverStatusDot');
+        if (!dot) return;
+        dot.title      = connected ? 'Serveur connecté' : 'Serveur non disponible';
+        dot.style.background = connected ? 'var(--success)' : 'var(--error)';
+    }
+
+    async function syncToServer(key, data) {
+        const token = localStorage.getItem('serverToken');
+        const pid   = getCurrentProfileId();
+        if (!token || !pid) return;
+        try {
+            const res = await fetch(`/api/${pid}/${key}`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'x-token': token },
+                body:    JSON.stringify(data)
+            });
+            updateServerStatus(res.ok);
+        } catch (_) { updateServerStatus(false); }
+    }
+
+    async function syncFromServer(pid) {
+        const token = localStorage.getItem('serverToken');
+        if (!token || !pid) return;
+        try {
+            const res = await fetch(`/api/${pid}`, { headers: { 'x-token': token } });
+            if (!res.ok) { updateServerStatus(false); return; }
+            const serverData = await res.json();
+            let changed = false;
+            Object.entries(serverData).forEach(([key, value]) => {
+                const serverRaw = JSON.stringify(value);
+                if (localStorage.getItem(key) !== serverRaw) {
+                    localStorage.setItem(key, serverRaw);
+                    changed = true;
+                }
+                localStorage.setItem(`profile_${pid}_${key}`, serverRaw);
+            });
+            if (changed) window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+            updateServerStatus(true);
+        } catch (_) { updateServerStatus(false); }
+    }
+
+    window.openServerConfig = function () {
+        const current = localStorage.getItem('serverToken') || '';
+        openModal({
+            title: 'Connexion au serveur',
+            fields: [
+                { key: 'token', label: 'Token d\'accès', type: 'password', placeholder: 'changeme' }
+            ],
+            values: { token: current },
+            onSave: (vals) => {
+                const t = vals.token.trim();
+                if (t) localStorage.setItem('serverToken', t);
+                else   localStorage.removeItem('serverToken');
+                syncFromServer(getCurrentProfileId());
+            }
+        });
+    };
+
+    // ── Fonctions de données ──────────────────────────────────────────────────
+
     window.saveData = function (key, data) {
         const json = JSON.stringify(data);
         localStorage.setItem(key, json);
         const pid = getCurrentProfileId();
         if (pid) localStorage.setItem(`profile_${pid}_${key}`, json);
+        syncToServer(key, data);
     };
 
     window.loadData = function (key) {
@@ -575,6 +640,7 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.setItem('bodySettings', json);
         const pid = getCurrentProfileId();
         if (pid) localStorage.setItem(`profile_${pid}_bodySettings`, json);
+        syncToServer('bodySettings', settings);
     };
 
     window.loadBodySettings = function () {
@@ -588,6 +654,9 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(el);
         setTimeout(() => el.remove(), 3000);
     };
+
+    // Sync serveur au démarrage
+    syncFromServer(getCurrentProfileId());
 
     // Initialiser le graphique au démarrage
     updateRecapChart();
