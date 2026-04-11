@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Suivi Sportif</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -24,8 +27,19 @@
         <!-- ===== ACCUEIL ===== -->
         <div class="tab-content active" id="accueil">
             <h2>Récapitulatif</h2>
-            <div id="recapChartWrapper">
-                <canvas id="recapChart"></canvas>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>⚖️ Poids</h3>
+                    <canvas id="chartPoids"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>😴 Sommeil</h3>
+                    <canvas id="chartSommeil"></canvas>
+                </div>
+                <div class="chart-card chart-card--full">
+                    <h3>🔥 Bilan calorique</h3>
+                    <canvas id="chartCalories"></canvas>
+                </div>
             </div>
         </div>
 
@@ -76,20 +90,20 @@
                     <label for="date-sommeil">Date :</label>
                     <input type="date" id="date-sommeil" required>
 
-                    <label for="apnee">Apnée (h) :</label>
-                    <input type="number" id="apnee" min="0" step="0.1">
+                    <label for="apnee">Apnée (évén./h) :</label>
+                    <input type="number" id="apnee" min="0" step="0.1" placeholder="ex : 5.2">
 
-                    <label for="rem">REM (h) :</label>
-                    <input type="number" id="rem" min="0" step="0.1">
+                    <label for="rem">REM :</label>
+                    <input type="text" id="rem" placeholder="ex : 1h30">
 
-                    <label for="profond">Sommeil profond (h) :</label>
-                    <input type="number" id="profond" min="0" step="0.1">
+                    <label for="profond">Sommeil profond :</label>
+                    <input type="text" id="profond" placeholder="ex : 1h15">
 
-                    <label for="leger">Sommeil léger (h) :</label>
-                    <input type="number" id="leger" min="0" step="0.1">
+                    <label for="leger">Sommeil léger :</label>
+                    <input type="text" id="leger" placeholder="ex : 2h00">
 
-                    <label for="temps-total">Temps total (h) :</label>
-                    <input type="number" id="temps-total" min="0" step="0.1">
+                    <label for="temps-total">Temps total :</label>
+                    <input type="text" id="temps-total" placeholder="ex : 7h30">
 
                     <label for="bpm">BPM :</label>
                     <input type="number" id="bpm" min="0">
@@ -104,11 +118,11 @@
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Apnée (min)</th>
-                            <th>REM (min)</th>
-                            <th>Profond (min)</th>
-                            <th>Léger (min)</th>
-                            <th>Temps total (min)</th>
+                            <th>Apnée (évén./h)</th>
+                            <th>REM (h)</th>
+                            <th>Profond (h)</th>
+                            <th>Léger (h)</th>
+                            <th>Temps total (h)</th>
                             <th>BPM</th>
                             <th>Oxygène (%)</th>
                             <th></th>
@@ -123,49 +137,66 @@
         <div class="tab-content" id="repas">
             <div class="onglet-content">
                 <h2>Repas</h2>
-                <form id="repasForm">
+
+                <div class="repas-date-header">
                     <label for="date-repas">Date :</label>
-                    <input type="date" id="date-repas" required>
-
-                    <label for="type-repas">Type :</label>
-                    <select id="type-repas">
-                        <option value="petit-dejeuner">Petit-déjeuner</option>
-                        <option value="dejeuner">Déjeuner</option>
-                        <option value="diner">Dîner</option>
-                        <option value="collation">Collation</option>
-                    </select>
-
-                    <label for="aliments">Aliments :</label>
-                    <textarea id="aliments" rows="2" placeholder="Ex: Riz 150g, Poulet 200g..."></textarea>
-
-                    <label for="calories">Calories (kcal) :</label>
-                    <input type="number" id="calories" min="0" placeholder="0">
-
-                    <label for="proteines">Protéines (g) :</label>
-                    <input type="number" id="proteines" min="0" placeholder="0">
-
-                    <label for="glucides">Glucides (g) :</label>
-                    <input type="number" id="glucides" min="0" placeholder="0">
-
-                    <label for="lipides">Lipides (g) :</label>
-                    <input type="number" id="lipides" min="0" placeholder="0">
-
-                    <button type="submit">Enregistrer</button>
-                </form>
-                <div id="repasFeedback"></div>
-                <div id="repasTotaux" class="totaux-bar" style="display:none">
-                    <span id="totalKcal">0 kcal</span>
-                    <span id="totalProt">0 g prot.</span>
-                    <span id="totalGluc">0 g gluc.</span>
-                    <span id="totalLip">0 g lip.</span>
+                    <input type="date" id="date-repas">
+                    <button id="btn-save-repas" class="btn-primary">Enregistrer la journée</button>
                 </div>
+
+                <div class="repas-grid">
+                    <div class="repas-card" data-meal="petitDejeuner">
+                        <h4>🌅 Petit-déjeuner</h4>
+                        <textarea class="r-aliments" rows="2" placeholder="Oeufs, pain..."></textarea>
+                        <div class="repas-macros">
+                            <div><label>kcal</label><input type="number" class="r-cal"  min="0" placeholder="0"></div>
+                            <div><label>Prot. g</label><input type="number" class="r-prot" min="0" placeholder="0"></div>
+                            <div><label>Gluc. g</label><input type="number" class="r-gluc" min="0" placeholder="0"></div>
+                            <div><label>Lip. g</label><input type="number" class="r-lip"  min="0" placeholder="0"></div>
+                        </div>
+                    </div>
+
+                    <div class="repas-card" data-meal="dejeuner">
+                        <h4>☀️ Déjeuner</h4>
+                        <textarea class="r-aliments" rows="2" placeholder="Poulet, riz..."></textarea>
+                        <div class="repas-macros">
+                            <div><label>kcal</label><input type="number" class="r-cal"  min="0" placeholder="0"></div>
+                            <div><label>Prot. g</label><input type="number" class="r-prot" min="0" placeholder="0"></div>
+                            <div><label>Gluc. g</label><input type="number" class="r-gluc" min="0" placeholder="0"></div>
+                            <div><label>Lip. g</label><input type="number" class="r-lip"  min="0" placeholder="0"></div>
+                        </div>
+                    </div>
+
+                    <div class="repas-card" data-meal="collation">
+                        <h4>🍎 Collation</h4>
+                        <textarea class="r-aliments" rows="2" placeholder="Fruits, yaourt..."></textarea>
+                        <div class="repas-macros">
+                            <div><label>kcal</label><input type="number" class="r-cal"  min="0" placeholder="0"></div>
+                            <div><label>Prot. g</label><input type="number" class="r-prot" min="0" placeholder="0"></div>
+                            <div><label>Gluc. g</label><input type="number" class="r-gluc" min="0" placeholder="0"></div>
+                            <div><label>Lip. g</label><input type="number" class="r-lip"  min="0" placeholder="0"></div>
+                        </div>
+                    </div>
+
+                    <div class="repas-card" data-meal="diner">
+                        <h4>🌙 Dîner</h4>
+                        <textarea class="r-aliments" rows="2" placeholder="Saumon, légumes..."></textarea>
+                        <div class="repas-macros">
+                            <div><label>kcal</label><input type="number" class="r-cal"  min="0" placeholder="0"></div>
+                            <div><label>Prot. g</label><input type="number" class="r-prot" min="0" placeholder="0"></div>
+                            <div><label>Gluc. g</label><input type="number" class="r-gluc" min="0" placeholder="0"></div>
+                            <div><label>Lip. g</label><input type="number" class="r-lip"  min="0" placeholder="0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="repasFeedback"></div>
+
                 <table id="repasTable">
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Type</th>
-                            <th>Aliments</th>
-                            <th>Kcal</th>
+                            <th>Kcal totales</th>
                             <th>Prot. (g)</th>
                             <th>Gluc. (g)</th>
                             <th>Lip. (g)</th>
@@ -199,7 +230,10 @@
                     <input type="number" id="duree" min="0" placeholder="60">
 
                     <label for="kcal">Kcal brûlées :</label>
-                    <input type="number" id="kcal" min="0" placeholder="0">
+                    <div class="kcal-row">
+                        <input type="number" id="kcal" min="0" placeholder="0">
+                        <button type="button" id="btn-calc-kcal" title="Calculer automatiquement">⚡ Calculer</button>
+                    </div>
 
                     <label for="ressenti">Ressenti (1-5) :</label>
                     <select id="ressenti">
@@ -235,21 +269,45 @@
 
         <!-- ===== IMPORTER ===== -->
         <div class="tab-content" id="importer">
-            <div class="onglet-content">
+
+            <!-- Guard d'accès Google -->
+            <div id="importGuard" class="import-guard">
+                <div class="import-guard-box">
+                    <div class="import-guard-icon">🔒</div>
+                    <h3>Accès restreint</h3>
+                    <p id="guardMessage">Connecte-toi avec ton compte Google administrateur pour accéder à l'importation.</p>
+                    <div id="googleSignInBtn"></div>
+                    <p id="guardError" class="guard-error"></p>
+                    <details id="guardSetup" style="margin-top:20px;width:100%;text-align:left">
+                        <summary style="cursor:pointer;color:#4c51bf;font-size:0.85rem;text-align:center">⚙️ Première configuration — Client ID Google</summary>
+                        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                            <input type="text" id="guardClientId" placeholder="XXXXXXXXXX.apps.googleusercontent.com" style="padding:8px 10px;border:1px solid #cbd5e0;border-radius:8px;font-size:0.85rem">
+                            <button id="guardSaveClientId" class="btn-primary">Sauvegarder et continuer</button>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Contenu réel (masqué si non autorisé) -->
+            <div id="importerContent" class="onglet-content" style="display:none">
                 <h2>Importer / Exporter</h2>
 
                 <!-- Google Fit -->
                 <div class="import-section" id="section-gfit">
                     <div class="import-section-header">
                         <div class="import-icon">🏃</div>
-                        <div>
+                        <div style="flex:1">
                             <h3>Google Fit / Health Connect</h3>
-                            <p class="import-desc">Importe automatiquement ton poids, tes nuits de sommeil et tes séances depuis Google Fit (synchronisé avec Health Connect sur Android).</p>
+                            <p class="import-desc">
+                                Sync auto quotidienne · Dernière sync : <strong id="gfit-last-sync">jamais</strong>
+                                <span id="gfit-status" class="gfit-status" style="margin-left:8px"></span>
+                            </p>
                         </div>
+                        <button id="btn-connect-gfit" class="btn-secondary" style="white-space:nowrap;align-self:center" title="Se reconnecter manuellement à Google Fit">🔄 Reconnecter</button>
                     </div>
 
                     <details class="setup-guide">
-                        <summary>⚙️ Configuration requise (une seule fois)</summary>
+                        <summary>⚙️ Configuration (une seule fois)</summary>
                         <ol>
                             <li>Va sur <strong>console.cloud.google.com</strong> → crée un projet</li>
                             <li>Active l'API <strong>Fitness API</strong></li>
@@ -257,28 +315,19 @@
                             <li>Ajoute <code>http://localhost</code> (ou ton URL) dans les origines JavaScript autorisées</li>
                             <li>Copie ton <strong>Client ID</strong> ci-dessous</li>
                         </ol>
-                        <p class="setup-note">⚠️ L'authentification nécessite d'ouvrir le fichier via un serveur local. Dans VSCode : installe l'extension <strong>Live Server</strong> puis clique sur "Go Live".</p>
+                        <p class="setup-note">⚠️ L'authentification nécessite d'ouvrir le fichier via un serveur local (Live Server dans VSCode ou <code>npx serve .</code>).</p>
+                        <div class="gfit-config" style="margin-top:12px">
+                            <label for="gfit-client-id">Client ID Google OAuth :</label>
+                            <div class="input-row">
+                                <input type="text" id="gfit-client-id" placeholder="XXXXXXXXXX.apps.googleusercontent.com">
+                                <button id="btn-save-client-id" class="btn-secondary">Sauvegarder</button>
+                            </div>
+                        </div>
                     </details>
 
-                    <div class="gfit-config">
-                        <label for="gfit-client-id">Client ID Google OAuth :</label>
-                        <div class="input-row">
-                            <input type="text" id="gfit-client-id" placeholder="XXXXXXXXXX.apps.googleusercontent.com">
-                            <button id="btn-save-client-id" class="btn-secondary">Sauvegarder</button>
-                        </div>
-                    </div>
-
-                    <div class="gfit-controls">
-                        <button id="btn-connect-gfit" class="btn-gfit">
-                            <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                            Se connecter à Google Fit
-                        </button>
-                        <span id="gfit-status" class="gfit-status"></span>
-                    </div>
-
-                    <div id="gfit-import-panel" class="gfit-import-panel" style="display:none">
+                    <div id="gfit-import-panel" class="gfit-import-panel">
                         <div class="date-range-row">
-                            <label>Période :</label>
+                            <label>Import manuel — Période :</label>
                             <input type="date" id="gfit-start">
                             <span>→</span>
                             <input type="date" id="gfit-end">
@@ -363,8 +412,8 @@
                 </div>
 
                 <div id="importerFeedback"></div>
-            </div>
-        </div>
+            </div><!-- /#importerContent -->
+            </div><!-- /.tab-content#importer -->
 
     </div><!-- /.container -->
 
@@ -380,6 +429,25 @@
         </div>
     </div>
 
+    <!-- ── Assistant IA ─────────────────────────────────── -->
+    <div id="chatBubble" title="Assistant IA">🤖</div>
+
+    <div id="chatPanel" class="chat-panel hidden">
+        <div class="chat-header">
+            <span>🤖 Assistant IA</span>
+            <button id="chatClose" title="Fermer">✕</button>
+        </div>
+        <div class="chat-api-bar" id="chatApiBar">
+            <input type="password" id="chatApiKey" placeholder="Clé API Anthropic (sk-ant-…)" />
+            <button id="chatSaveKey">Sauvegarder</button>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-row">
+            <textarea id="chatInput" rows="2" placeholder="Pose une question sur tes données…"></textarea>
+            <button id="chatSend">➤</button>
+        </div>
+    </div>
+
     <!-- Scripts chargés statiquement (pas de fetch, fonctionne en file://) -->
     <script src="script.js"></script>
     <script src="body/body.js"></script>
@@ -387,5 +455,6 @@
     <script src="repas/repas.js"></script>
     <script src="sceances/sceances.js"></script>
     <script src="importer/importer.js"></script>
+    <script src="assistant/assistant.js"></script>
 </body>
 </html>

@@ -1,20 +1,66 @@
 document.addEventListener('DOMContentLoaded', function() {
     const seanceForm = document.getElementById('seanceForm');
-    const tableBody = document.querySelector('#seanceTable tbody');
+    const tableBody  = document.querySelector('#seanceTable tbody');
     const feedbackEl = document.getElementById('seanceFeedback');
 
     document.getElementById('date-seance').valueAsDate = new Date();
 
     const typeLabels = {
         'musculation': 'Musculation',
-        'cardio': 'Cardio',
-        'hiit': 'HIIT',
-        'yoga': 'Yoga / Stretching',
-        'sport-co': 'Sport collectif',
-        'autre': 'Autre'
+        'cardio':      'Cardio',
+        'hiit':        'HIIT',
+        'yoga':        'Yoga / Stretching',
+        'sport-co':    'Sport collectif',
+        'autre':       'Autre'
     };
 
     const ressentiLabels = { 1: '★☆☆☆☆', 2: '★★☆☆☆', 3: '★★★☆☆', 4: '★★★★☆', 5: '★★★★★' };
+
+    // ── Valeurs MET par type d'activité ──────────────────────
+    // MET (Metabolic Equivalent of Task) — source : Compendium of Physical Activities
+    const MET = {
+        'musculation': 4.0,   // musculation modérée
+        'cardio':      8.0,   // course/vélo intensité modérée
+        'hiit':        10.5,  // HIIT intense
+        'yoga':        2.5,   // yoga/stretching
+        'sport-co':    7.0,   // sport collectif (foot, basket...)
+        'autre':       5.0,
+    };
+
+    // ── Calcul automatique des kcal ──────────────────────────
+
+    function calculerKcal(type, dureeMin) {
+        const settings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+        const poids = settings?.poids;
+        if (!poids) return null;
+        const met = MET[type] || 5;
+        return Math.round(met * poids * (dureeMin / 60));
+    }
+
+    document.getElementById('btn-calc-kcal').addEventListener('click', function () {
+        const type    = document.getElementById('type-seance').value;
+        const duree   = parseFloat(document.getElementById('duree').value) || 0;
+        const settings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+
+        if (!settings?.poids) {
+            showFeedback(feedbackEl, '⚠️ Renseigne ton poids dans l\'onglet Body d\'abord.', 'error');
+            return;
+        }
+        if (!duree) {
+            showFeedback(feedbackEl, '⚠️ Entre d\'abord la durée de la séance.', 'error');
+            return;
+        }
+
+        const kcal = calculerKcal(type, duree);
+        document.getElementById('kcal').value = kcal;
+
+        const met = MET[type] || 5;
+        showFeedback(feedbackEl,
+            `⚡ ${kcal} kcal calculées (MET ${met} × ${settings.poids} kg × ${(duree/60).toFixed(2)} h) — tu peux ajuster.`
+        );
+    });
+
+    // ── Rendu tableau ────────────────────────────────────────
 
     function renderTable() {
         const data = loadData('seanceData');
@@ -26,8 +72,8 @@ document.addEventListener('DOMContentLoaded', function() {
             row.innerHTML = `
                 <td>${entry.date}</td>
                 <td>${typeLabels[entry.type] || entry.type}</td>
-                <td>${entry.duree || '—'}</td>
-                <td>${entry.kcal || '—'}</td>
+                <td>${entry.duree ? entry.duree + ' min' : '—'}</td>
+                <td>${entry.kcal ? entry.kcal + ' kcal' : '—'}</td>
                 <td title="${entry.ressenti}/5">${ressentiLabels[entry.ressenti] || entry.ressenti}</td>
                 <td class="notes-cell">${entry.exercices || '—'}</td>
                 <td class="actions-cell">
@@ -39,17 +85,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ── Clics tableau ────────────────────────────────────────
+
     tableBody.addEventListener('click', function(e) {
-        const idx = parseInt(e.target.getAttribute('data-index'));
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const idx  = parseInt(btn.getAttribute('data-index'));
         const data = loadData('seanceData');
 
-        if (e.target.classList.contains('btn-delete')) {
+        if (btn.classList.contains('btn-delete')) {
             data.splice(idx, 1);
             saveData('seanceData', data);
             renderTable();
         }
 
-        if (e.target.classList.contains('btn-edit')) {
+        if (btn.classList.contains('btn-edit')) {
             openModal({
                 title: 'Modifier la séance',
                 fields: [
@@ -71,14 +121,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ── Formulaire ───────────────────────────────────────────
+
     seanceForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        const type  = document.getElementById('type-seance').value;
+        const duree = parseFloat(document.getElementById('duree').value) || 0;
+        let   kcal  = parseFloat(document.getElementById('kcal').value)  || 0;
+
+        // Auto-calculer si kcal vide et poids disponible
+        if (!kcal && duree) {
+            const calc = calculerKcal(type, duree);
+            if (calc) kcal = calc;
+        }
+
         const entry = {
-            date: document.getElementById('date-seance').value,
-            type: document.getElementById('type-seance').value,
-            duree: parseFloat(document.getElementById('duree').value) || 0,
-            kcal: parseFloat(document.getElementById('kcal').value) || 0,
-            ressenti: parseInt(document.getElementById('ressenti').value),
+            date:      document.getElementById('date-seance').value,
+            type,
+            duree,
+            kcal,
+            ressenti:  parseInt(document.getElementById('ressenti').value),
             exercices: document.getElementById('exercices').value.trim()
         };
         const data = loadData('seanceData');
@@ -88,6 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
         seanceForm.reset();
         document.getElementById('date-seance').valueAsDate = new Date();
         document.getElementById('ressenti').value = '3';
+        window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
         showFeedback(feedbackEl, 'Séance enregistrée !');
     });
 

@@ -1,111 +1,172 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const repasForm = document.getElementById('repasForm');
+document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('#repasTable tbody');
     const feedbackEl = document.getElementById('repasFeedback');
-    const totauxBar = document.getElementById('repasTotaux');
 
-    // Date du jour par défaut
     document.getElementById('date-repas').valueAsDate = new Date();
 
-    function typeLabel(type) {
-        const labels = {
-            'petit-dejeuner': 'Petit-déjeuner',
-            'dejeuner': 'Déjeuner',
-            'diner': 'Dîner',
-            'collation': 'Collation'
+    const MEALS = [
+        { key: 'petitDejeuner', label: '🌅 Petit-déjeuner' },
+        { key: 'dejeuner',      label: '☀️ Déjeuner'       },
+        { key: 'collation',     label: '🍎 Collation'       },
+        { key: 'diner',         label: '🌙 Dîner'           },
+    ];
+
+    // ── Lecture d'une carte repas ────────────────────────────
+
+    function readCard(card) {
+        return {
+            aliments:  card.querySelector('.r-aliments').value.trim(),
+            calories:  parseFloat(card.querySelector('.r-cal').value)  || 0,
+            proteines: parseFloat(card.querySelector('.r-prot').value) || 0,
+            glucides:  parseFloat(card.querySelector('.r-gluc').value) || 0,
+            lipides:   parseFloat(card.querySelector('.r-lip').value)  || 0,
         };
-        return labels[type] || type;
     }
 
-    function updateTotaux(data) {
-        if (data.length === 0) { totauxBar.style.display = 'none'; return; }
-        const totalKcal = data.reduce((s, r) => s + (r.calories || 0), 0);
-        const totalProt = data.reduce((s, r) => s + (r.proteines || 0), 0);
-        const totalGluc = data.reduce((s, r) => s + (r.glucides || 0), 0);
-        const totalLip  = data.reduce((s, r) => s + (r.lipides || 0), 0);
-        document.getElementById('totalKcal').textContent = `${totalKcal} kcal`;
-        document.getElementById('totalProt').textContent = `${totalProt} g prot.`;
-        document.getElementById('totalGluc').textContent = `${totalGluc} g gluc.`;
-        document.getElementById('totalLip').textContent  = `${totalLip} g lip.`;
-        totauxBar.style.display = 'flex';
+    function fillCard(card, meal) {
+        card.querySelector('.r-aliments').value = meal?.aliments  || '';
+        card.querySelector('.r-cal').value       = meal?.calories  || '';
+        card.querySelector('.r-prot').value      = meal?.proteines || '';
+        card.querySelector('.r-gluc').value      = meal?.glucides  || '';
+        card.querySelector('.r-lip').value       = meal?.lipides   || '';
     }
+
+    function clearAllCards() {
+        document.querySelectorAll('.repas-card').forEach(card => fillCard(card, null));
+    }
+
+    // ── Totaux d'une journée ─────────────────────────────────
+
+    function totaux(jour) {
+        return MEALS.reduce((acc, m) => {
+            const meal = jour[m.key] || {};
+            acc.calories  += meal.calories  || 0;
+            acc.proteines += meal.proteines || 0;
+            acc.glucides  += meal.glucides  || 0;
+            acc.lipides   += meal.lipides   || 0;
+            return acc;
+        }, { calories: 0, proteines: 0, glucides: 0, lipides: 0 });
+    }
+
+    // ── Rendu du tableau ─────────────────────────────────────
 
     function renderTable() {
         const data = loadData('repasData');
         const sorted = [...data].sort((a, b) => b.date.localeCompare(a.date));
         tableBody.innerHTML = '';
-        sorted.forEach((entry) => {
-            const originalIdx = data.findIndex(e => e === entry || (e.date === entry.date && e.type === entry.type && e.calories === entry.calories));
+
+        sorted.forEach((jour) => {
+            const idx = data.indexOf(jour);
+            const t = totaux(jour);
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${entry.date}</td>
-                <td>${typeLabel(entry.type)}</td>
-                <td>${entry.aliments || '—'}</td>
-                <td>${entry.calories || 0}</td>
-                <td>${entry.proteines || 0}</td>
-                <td>${entry.glucides || 0}</td>
-                <td>${entry.lipides || 0}</td>
+                <td>${jour.date}</td>
+                <td>${t.calories} kcal</td>
+                <td>${t.proteines} g</td>
+                <td>${t.glucides} g</td>
+                <td>${t.lipides} g</td>
                 <td class="actions-cell">
-                    <button class="btn-edit"   data-index="${originalIdx}" title="Modifier">✎</button>
-                    <button class="btn-delete" data-index="${originalIdx}" title="Supprimer">✕</button>
+                    <button class="btn-detail" data-index="${idx}" title="Détail">🔍</button>
+                    <button class="btn-edit"   data-index="${idx}" title="Modifier">✎</button>
+                    <button class="btn-delete" data-index="${idx}" title="Supprimer">✕</button>
                 </td>
             `;
             tableBody.appendChild(row);
         });
-        updateTotaux(data);
     }
 
-    tableBody.addEventListener('click', function(e) {
-        const idx = parseInt(e.target.getAttribute('data-index'));
-        const data = loadData('repasData');
+    // ── Popup détail ─────────────────────────────────────────
 
-        if (e.target.classList.contains('btn-delete')) {
+    function showDetail(jour) {
+        const t = totaux(jour);
+        let html = `<p style="margin:0 0 14px;font-weight:600;color:#4a5568">${jour.date}</p>`;
+
+        MEALS.forEach(m => {
+            const meal = jour[m.key];
+            if (!meal || (!meal.calories && !meal.aliments)) return;
+            html += `
+                <div class="detail-meal">
+                    <div class="detail-meal-title">${m.label}</div>
+                    ${meal.aliments ? `<div class="detail-aliments">${meal.aliments}</div>` : ''}
+                    <div class="detail-macros">
+                        <span>${meal.calories} kcal</span>
+                        <span>${meal.proteines} g prot.</span>
+                        <span>${meal.glucides} g gluc.</span>
+                        <span>${meal.lipides} g lip.</span>
+                    </div>
+                </div>`;
+        });
+
+        html += `
+            <div class="detail-total">
+                <span>Total : <strong>${t.calories} kcal</strong></span>
+                <span>${t.proteines} g prot.</span>
+                <span>${t.glucides} g gluc.</span>
+                <span>${t.lipides} g lip.</span>
+            </div>`;
+
+        openInfoModal(`Détail du ${jour.date}`, html);
+    }
+
+    // ── Clics tableau ────────────────────────────────────────
+
+    tableBody.addEventListener('click', function (e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const idx = parseInt(btn.getAttribute('data-index'));
+        const data = loadData('repasData');
+        const jour = data[idx];
+
+        if (btn.classList.contains('btn-delete')) {
             data.splice(idx, 1);
             saveData('repasData', data);
             renderTable();
         }
 
-        if (e.target.classList.contains('btn-edit')) {
-            openModal({
-                title: 'Modifier le repas',
-                fields: [
-                    { key: 'date',      label: 'Date',           type: 'date' },
-                    { key: 'type',      label: 'Type',           type: 'select', options: [['petit-dejeuner','Petit-déjeuner'],['dejeuner','Déjeuner'],['diner','Dîner'],['collation','Collation']] },
-                    { key: 'aliments',  label: 'Aliments',       type: 'textarea' },
-                    { key: 'calories',  label: 'Calories (kcal)', type: 'number', min: 0 },
-                    { key: 'proteines', label: 'Protéines (g)',   type: 'number', min: 0 },
-                    { key: 'glucides',  label: 'Glucides (g)',    type: 'number', min: 0 },
-                    { key: 'lipides',   label: 'Lipides (g)',     type: 'number', min: 0 },
-                ],
-                values: data[idx],
-                onSave: (vals) => {
-                    data[idx] = { ...data[idx], ...vals, calories: parseFloat(vals.calories)||0, proteines: parseFloat(vals.proteines)||0, glucides: parseFloat(vals.glucides)||0, lipides: parseFloat(vals.lipides)||0 };
-                    saveData('repasData', data);
-                    renderTable();
-                    showFeedback(feedbackEl, 'Repas modifié !');
-                }
+        if (btn.classList.contains('btn-detail')) {
+            showDetail(jour);
+        }
+
+        if (btn.classList.contains('btn-edit')) {
+            // Charger les données dans les cartes + changer la date
+            document.getElementById('date-repas').value = jour.date;
+            MEALS.forEach(m => {
+                const card = document.querySelector(`.repas-card[data-meal="${m.key}"]`);
+                fillCard(card, jour[m.key]);
             });
+            // Supprimer l'ancienne entrée (sera recréée à l'enregistrement)
+            data.splice(idx, 1);
+            saveData('repasData', data);
+            renderTable();
+            showFeedback(feedbackEl, 'Journée chargée — modifie et enregistre.');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
 
-    repasForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const entry = {
-            date: document.getElementById('date-repas').value,
-            type: document.getElementById('type-repas').value,
-            aliments: document.getElementById('aliments').value.trim(),
-            calories: parseFloat(document.getElementById('calories').value) || 0,
-            proteines: parseFloat(document.getElementById('proteines').value) || 0,
-            glucides: parseFloat(document.getElementById('glucides').value) || 0,
-            lipides: parseFloat(document.getElementById('lipides').value) || 0
-        };
+    // ── Enregistrement ───────────────────────────────────────
+
+    document.getElementById('btn-save-repas').addEventListener('click', function () {
+        const date = document.getElementById('date-repas').value;
+        if (!date) { showFeedback(feedbackEl, 'Choisis une date.', 'error'); return; }
+
+        const jour = { date };
+        MEALS.forEach(m => {
+            const card = document.querySelector(`.repas-card[data-meal="${m.key}"]`);
+            jour[m.key] = readCard(card);
+        });
+
         const data = loadData('repasData');
-        data.push(entry);
+        // Remplacer si la date existe déjà
+        const existingIdx = data.findIndex(j => j.date === date);
+        if (existingIdx >= 0) data[existingIdx] = jour;
+        else data.push(jour);
+
         saveData('repasData', data);
         renderTable();
-        repasForm.reset();
+        clearAllCards();
         document.getElementById('date-repas').valueAsDate = new Date();
-        showFeedback(feedbackEl, 'Repas enregistré !');
+        window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+        showFeedback(feedbackEl, 'Journée enregistrée !');
     });
 
     renderTable();

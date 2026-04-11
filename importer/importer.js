@@ -26,56 +26,128 @@ document.addEventListener('DOMContentLoaded', function () {
     let tokenClient = null;
     let parsedCsvData = null;
     let pendingConnect = false;   // true = déclencher requestAccessToken dès que tokenClient est prêt
+    let autoImportMode = false;   // true = connexion silencieuse pour import auto
+    let pendingImportCat = null;  // catégorie à importer après connexion manuelle
+
+    // ── Guard d'accès ────────────────────────────────────────
+
+    function isAuthorized() {
+        return !!sessionStorage.getItem('importerAuthorized');
+    }
+
+    function grantAccess() {
+        sessionStorage.setItem('importerAuthorized', '1');
+        document.getElementById('importGuard').style.display = 'none';
+        document.getElementById('importerContent').style.display = 'block';
+    }
+
+    function setupGuard() {
+        if (isAuthorized()) { grantAccess(); return; }
+
+        const clientId = localStorage.getItem('gfitClientId');
+        if (!clientId) {
+            // Pas encore de Client ID → afficher le formulaire de config
+            document.getElementById('guardSetup').open = true;
+            return;
+        }
+        loadGISForSignIn(clientId);
+    }
+
+    function loadGISForSignIn(clientId) {
+        if (typeof google !== 'undefined' && google.accounts?.id) {
+            renderSignInButton(clientId); return;
+        }
+        if (document.querySelector('script[src*="accounts.google.com/gsi"]')) {
+            const wait = setInterval(() => {
+                if (typeof google !== 'undefined' && google.accounts?.id) {
+                    clearInterval(wait); renderSignInButton(clientId);
+                }
+            }, 100);
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true; script.defer = true;
+        script.onload = () => renderSignInButton(clientId);
+        document.head.appendChild(script);
+    }
+
+    function renderSignInButton(clientId) {
+        try {
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleSignInResponse,
+                auto_select: true,
+            });
+            google.accounts.id.renderButton(
+                document.getElementById('googleSignInBtn'),
+                { theme: 'outline', size: 'large', width: 280, text: 'signin_with' }
+            );
+            google.accounts.id.prompt(); // tente l'auto-sélection silencieuse
+        } catch(e) {
+            document.getElementById('guardError').textContent = '❌ Erreur Google Sign-In : ' + e.message;
+        }
+    }
+
+    function handleSignInResponse(response) {
+        try {
+            // Décoder le JWT sans librairie
+            const b64 = response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+            const payload = JSON.parse(atob(b64));
+            const email = payload.email;
+            const adminEmail = localStorage.getItem('adminEmail');
+
+            if (!adminEmail) {
+                // Premier accès → enregistrer cet email comme admin
+                localStorage.setItem('adminEmail', email);
+                grantAccess();
+            } else if (email === adminEmail) {
+                grantAccess();
+            } else {
+                document.getElementById('guardError').textContent =
+                    `⛔ Accès refusé — ${email} n'est pas le compte administrateur (${adminEmail}).`;
+            }
+        } catch(e) {
+            document.getElementById('guardError').textContent = '❌ Erreur de vérification : ' + e.message;
+        }
+    }
+
+    // Formulaire de config du Client ID depuis le guard
+    document.getElementById('guardSaveClientId').addEventListener('click', () => {
+        const id = document.getElementById('guardClientId').value.trim();
+        if (!id) return;
+        localStorage.setItem('gfitClientId', id);
+        document.getElementById('gfit-client-id').value = id;
+        document.getElementById('guardError').textContent = '';
+        loadGISForSignIn(id);
+    });
+
+    setupGuard();
 
     // ── Initialisation ───────────────────────────────────────
-
-    // ── Panel de diagnostic ──────────────────────────────────
-    const diagEl = document.createElement('div');
-    diagEl.id = 'gfit-diag';
-    diagEl.style.cssText = 'background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-family:monospace';
-    document.getElementById('section-gfit').prepend(diagEl);
-
-    function updateDiag() {
-        const proto  = window.location.protocol;
-        const origin = window.location.origin;
-        const gisLoaded = typeof google !== 'undefined' && !!google.accounts;
-        const clientId  = (localStorage.getItem('gfitClientId') || '').slice(0, 20) || '(non sauvegardé)';
-        diagEl.innerHTML = [
-            `<b>Diagnostic Google Fit</b>`,
-            `🌐 Protocole : <b style="color:${proto==='file:'?'red':'green'}">${proto}</b> ${proto==='file:'?'← PROBLÈME : utilise Live Server':'✓'}`,
-            `📍 Origine : ${origin}`,
-            `📚 Lib GIS chargée : <b style="color:${gisLoaded?'green':'orange'}">${gisLoaded?'oui':'non (chargement en cours...)'}</b>`,
-            `🔑 Client ID : ${clientId}...`,
-            `🔧 tokenClient prêt : <b style="color:${tokenClient?'green':'orange'}">${tokenClient?'oui':'non'}</b>`,
-        ].join('<br>');
-    }
-
-    updateDiag();
-    setInterval(updateDiag, 1000); // rafraîchit chaque seconde
-
-    if (window.location.protocol === 'file:') {
-        const warn = document.createElement('div');
-        warn.className = 'feedback feedback-error';
-        warn.style.cssText = 'margin-bottom:16px;font-size:14px';
-        warn.innerHTML = '⚠️ <strong>Tu ouvres le fichier en file://</strong> — Google OAuth ne fonctionnera pas.<br>'
-            + 'Dans VSCode : clic droit sur <code>index.html</code> → <strong>"Open with Live Server"</strong>.<br>'
-            + 'Ou dans un terminal : <code>npx serve .</code> puis ouvre <code>http://localhost:3000</code>';
-        document.getElementById('section-gfit').prepend(warn);
-    }
 
     const savedClientId = localStorage.getItem('gfitClientId') || '';
     document.getElementById('gfit-client-id').value = savedClientId;
 
-    // Dates par défaut : 30 derniers jours
+    // Dates par défaut : depuis la dernière sync (ou 30 jours si jamais importé)
     const today = new Date();
-    const monthAgo = new Date(today);
-    monthAgo.setDate(today.getDate() - 30);
+    const lastSyncDate = localStorage.getItem('gfitLastAutoImport');
+    const startDate = lastSyncDate ? new Date(lastSyncDate) : new Date(Date.now() - 30 * 86_400_000);
     document.getElementById('gfit-end').valueAsDate = today;
-    document.getElementById('gfit-start').valueAsDate = monthAgo;
+    document.getElementById('gfit-start').value = startDate.toISOString().split('T')[0];
 
+    // Afficher la dernière sync
+    updateLastSyncDisplay();
+
+    // Auto-connexion silencieuse au démarrage si Client ID enregistré
     if (savedClientId) {
-        setGfitStatus('Chargement Google...', '');
-        initGoogleAuth(savedClientId);
+        const todayStr = todayStr_();
+        const lastImport = localStorage.getItem('gfitLastAutoImport');
+        if (lastImport !== todayStr) {
+            // Pas encore importé aujourd'hui → tentative silencieuse
+            autoImportMode = true;
+            initGoogleAuth(savedClientId);
+        }
     }
 
     // ── Sauvegarde Client ID ─────────────────────────────────
@@ -87,20 +159,20 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         localStorage.setItem('gfitClientId', clientId);
-        tokenClient = null; // forcer la réinitialisation si le client ID change
-        setGfitStatus('Client ID sauvegardé — chargement...', '');
+        tokenClient = null;
+        setGfitStatus('Client ID sauvegardé — connexion...', '');
+        autoImportMode = false;
+        pendingConnect = true;
         initGoogleAuth(clientId);
     });
 
     // ── Google Identity Services ─────────────────────────────
 
     function initGoogleAuth(clientId) {
-        // Lib déjà chargée
         if (typeof google !== 'undefined' && google.accounts) {
             setupTokenClient(clientId);
             return;
         }
-        // Lib déjà en cours de chargement (balise script déjà dans le DOM)
         if (document.querySelector('script[src*="accounts.google.com/gsi"]')) {
             const wait = setInterval(() => {
                 if (typeof google !== 'undefined' && google.accounts) {
@@ -110,13 +182,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 100);
             return;
         }
-        // Charger la lib
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
         script.async = true;
         script.defer = true;
         script.onload = () => setupTokenClient(clientId);
-        script.onerror = () => setGfitStatus('❌ Impossible de charger la lib Google (vérifies ta connexion internet)', 'error');
+        script.onerror = () => {
+            if (!autoImportMode) setGfitStatus('❌ Impossible de charger la lib Google', 'error');
+            autoImportMode = false;
+        };
         document.head.appendChild(script);
     }
 
@@ -125,47 +199,99 @@ document.addEventListener('DOMContentLoaded', function () {
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: clientId,
                 scope: GFIT_SCOPES,
-                callback: (resp) => {
+                callback: async (resp) => {
                     if (resp.error) {
-                        const msg = resp.error === 'popup_blocked_by_browser'
-                            ? '❌ Popup bloquée — autorise les popups pour ce site dans ton navigateur'
-                            : `❌ Erreur : ${resp.error}`;
-                        setGfitStatus(msg, 'error');
+                        if (!autoImportMode) {
+                            const msg = resp.error === 'popup_blocked_by_browser'
+                                ? '❌ Popup bloquée — autorise les popups pour ce site'
+                                : `❌ Erreur : ${resp.error}`;
+                            setGfitStatus(msg, 'error');
+                        }
+                        autoImportMode = false;
                         return;
                     }
                     gfitToken = resp.access_token;
-                    setGfitStatus('✓ Connecté à Google Fit', 'success');
-                    document.getElementById('gfit-import-panel').style.display = 'block';
+
+                    if (autoImportMode) {
+                        autoImportMode = false;
+                        await runAutoImport();
+                    } else {
+                        setGfitStatus('✓ Connecté', 'success');
+                        // Lancer l'import en attente s'il y en a un
+                        if (pendingImportCat) {
+                            const cat = pendingImportCat;
+                            pendingImportCat = null;
+                            runManualImport(cat);
+                        }
+                    }
+                },
+                error_callback: (err) => {
+                    // Échec silencieux (ex: prompt:none interaction_required)
+                    if (!autoImportMode) setGfitStatus(`❌ ${err.type || 'Erreur'}`, 'error');
+                    autoImportMode = false;
                 }
             });
-            setGfitStatus('✓ Prêt — clique sur "Se connecter"', '');
 
-            // Déclencher automatiquement si le bouton avait déjà été cliqué
-            if (pendingConnect) {
+            if (autoImportMode) {
+                // Tentative entièrement silencieuse
+                try { tokenClient.requestAccessToken({ prompt: 'none' }); }
+                catch (_) { autoImportMode = false; }
+            } else if (pendingConnect) {
                 pendingConnect = false;
                 tokenClient.requestAccessToken();
             }
         } catch (e) {
-            setGfitStatus('❌ Erreur init OAuth : ' + e.message, 'error');
+            if (!autoImportMode) setGfitStatus('❌ Erreur init OAuth : ' + e.message, 'error');
+            autoImportMode = false;
         }
     }
 
+    // ── Import automatique (7 derniers jours) ───────────────
+
+    async function runAutoImport() {
+        const endStr   = todayStr_();
+        // Reprendre depuis la dernière sync (ou 30 jours max si jamais importé)
+        const lastSync = localStorage.getItem('gfitLastAutoImport');
+        const startStr = lastSync || new Date(Date.now() - 30 * 86_400_000).toISOString().split('T')[0];
+        setGfitStatus('⏳ Sync en cours…', '');
+        let total = 0;
+        try {
+            total += await importPoids(startStr, endStr);
+            total += await importSommeil(startStr, endStr);
+            total += await importSeances(startStr, endStr);
+            localStorage.setItem('gfitLastAutoImport', endStr);
+            updateLastSyncDisplay();
+            setGfitStatus(`✓ Sync : ${total} nouvelle(s) entrée(s)`, 'success');
+            if (total > 0) window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+        } catch (e) {
+            setGfitStatus(`⚠️ Sync partielle : ${e.message}`, 'error');
+        }
+    }
+
+    function updateLastSyncDisplay() {
+        const last = localStorage.getItem('gfitLastAutoImport');
+        const el = document.getElementById('gfit-last-sync');
+        if (el) el.textContent = last || 'jamais';
+    }
+
+    function todayStr_() { return new Date().toISOString().split('T')[0]; }
+
+    // ── Bouton Reconnecter (manuel) ──────────────────────────
+
     document.getElementById('btn-connect-gfit').addEventListener('click', () => {
-        const clientId = document.getElementById('gfit-client-id').value.trim();
+        const clientId = localStorage.getItem('gfitClientId') || document.getElementById('gfit-client-id').value.trim();
         if (!clientId) {
-            setGfitStatus('⚠️ Entre et sauvegarde ton Client ID d\'abord', 'error');
+            setGfitStatus('⚠️ Configure ton Client ID dans la section ci-dessus d\'abord', 'error');
             return;
         }
+        autoImportMode = false;
         if (tokenClient) {
-            try {
-                setGfitStatus('Ouverture du popup Google...', '');
-                tokenClient.requestAccessToken();
-            } catch (e) {
-                setGfitStatus('❌ Erreur : ' + e.message, 'error');
-            }
+            setGfitStatus('Ouverture du popup Google…', '');
+            try { tokenClient.requestAccessToken(); }
+            catch (e) { setGfitStatus('❌ Erreur : ' + e.message, 'error'); }
         } else {
             pendingConnect = true;
-            setGfitStatus('Initialisation en cours...', '');
+            setGfitStatus('Initialisation…', '');
             initGoogleAuth(clientId);
         }
     });
@@ -416,38 +542,62 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Boutons import par catégorie ─────────────────────────
 
+    async function runManualImport(cat) {
+        const start = document.getElementById('gfit-start').value;
+        const end = document.getElementById('gfit-end').value;
+        const resultEl = document.getElementById('gfit-result');
+        const labels = { poids: '⚖️ Poids', sommeil: '😴 Sommeil', seances: '🏋️ Séances', nutrition: '🥗 Nutrition' };
+        const btn = document.querySelector(`.btn-import-cat[data-cat="${cat}"]`);
+
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Import en cours…'; }
+        resultEl.textContent = '';
+
+        try {
+            let count = 0;
+            if (cat === 'poids') count = await importPoids(start, end);
+            else if (cat === 'sommeil') count = await importSommeil(start, end);
+            else if (cat === 'seances') count = await importSeances(start, end);
+            else if (cat === 'nutrition') count = await importNutrition(start, end);
+
+            resultEl.className = 'gfit-result success';
+            resultEl.textContent = count > 0
+                ? `✓ ${count} entrée(s) importée(s) avec succès`
+                : 'Aucune nouvelle donnée trouvée pour cette période';
+            if (count > 0) window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+        } catch (e) {
+            resultEl.className = 'gfit-result error';
+            resultEl.textContent = `Erreur : ${e.message}`;
+        } finally {
+            if (btn) { btn.textContent = labels[cat]; btn.disabled = false; }
+        }
+    }
+
     document.querySelectorAll('.btn-import-cat').forEach(btn => {
         btn.addEventListener('click', async () => {
-            if (!gfitToken) { setGfitStatus('Connecte-toi d\'abord à Google Fit', 'error'); return; }
             const cat = btn.getAttribute('data-cat');
-            const start = document.getElementById('gfit-start').value;
-            const end = document.getElementById('gfit-end').value;
-            const resultEl = document.getElementById('gfit-result');
 
-            btn.disabled = true;
-            btn.textContent = '⏳ Import en cours…';
-            resultEl.textContent = '';
-
-            try {
-                let count = 0;
-                if (cat === 'poids') count = await importPoids(start, end);
-                else if (cat === 'sommeil') count = await importSommeil(start, end);
-                else if (cat === 'seances') count = await importSeances(start, end);
-                else if (cat === 'nutrition') count = await importNutrition(start, end);
-
-                resultEl.className = 'gfit-result success';
-                resultEl.textContent = count > 0
-                    ? `✓ ${count} entrée(s) importée(s) avec succès`
-                    : 'Aucune nouvelle donnée trouvée pour cette période';
-                if (count > 0) window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
-            } catch (e) {
-                resultEl.className = 'gfit-result error';
-                resultEl.textContent = `Erreur : ${e.message}`;
-            } finally {
-                const labels = { poids: '⚖️ Poids', sommeil: '😴 Sommeil', seances: '🏋️ Séances', nutrition: '🥗 Nutrition' };
-                btn.textContent = labels[cat];
-                btn.disabled = false;
+            // Si pas encore connecté → connexion automatique puis import
+            if (!gfitToken) {
+                const clientId = localStorage.getItem('gfitClientId') || '';
+                if (!clientId) {
+                    const resultEl = document.getElementById('gfit-result');
+                    resultEl.className = 'gfit-result error';
+                    resultEl.textContent = '⚠️ Configure ton Client ID Google dans la section "Configuration" ci-dessus.';
+                    return;
+                }
+                pendingImportCat = cat;
+                setGfitStatus('Connexion Google…', '');
+                if (tokenClient) {
+                    try { tokenClient.requestAccessToken(); }
+                    catch (e) { setGfitStatus('❌ ' + e.message, 'error'); pendingImportCat = null; }
+                } else {
+                    pendingConnect = true;
+                    initGoogleAuth(clientId);
+                }
+                return;
             }
+
+            await runManualImport(cat);
         });
     });
 
