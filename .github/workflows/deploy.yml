@@ -19,7 +19,7 @@ jobs:
           host: mon-suivis-sportif.freeboxos.fr
           username: freebox
           key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
+          port: 49154
           script: |
             cd /var/www/mon-suivi-sportif
             git pull origin main
