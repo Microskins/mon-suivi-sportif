@@ -304,6 +304,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (v !== null) localStorage.setItem(`profile_${id}_${key}`, v);
             });
         }
+        syncProfilesToServer();
         doSwitchProfile(id);
         return id;
     }
@@ -601,6 +602,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (raw === '0') fresh[i].pin = null;
                 else if (/^\d{4}$/.test(raw)) fresh[i].pin = raw;
                 localStorage.setItem('profiles', JSON.stringify(fresh));
+                syncProfilesToServer();
                 renderProfileUI();
                 window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
             }
@@ -661,6 +663,49 @@ document.addEventListener('DOMContentLoaded', function () {
                 body:    JSON.stringify(data)
             });
             updateServerStatus(res.ok);
+        } catch (_) { updateServerStatus(false); }
+    }
+
+    async function syncProfilesToServer() {
+        const token = localStorage.getItem('serverToken');
+        if (!token) return;
+        try {
+            await fetch('/api/_global/profiles', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'x-token': token },
+                body:    JSON.stringify(getProfiles())
+            });
+        } catch (_) {}
+    }
+
+    async function syncProfilesFromServer() {
+        const token = localStorage.getItem('serverToken');
+        if (!token) return;
+        try {
+            const res = await fetch('/api/_global/profiles', { headers: { 'x-token': token } });
+            if (!res.ok) return;
+            const serverProfiles = await res.json();
+            if (Array.isArray(serverProfiles) && serverProfiles.length > 0) {
+                localStorage.setItem('profiles', JSON.stringify(serverProfiles));
+                renderProfileUI();
+            } else {
+                // Serveur vide → on pousse les profils locaux
+                await syncProfilesToServer();
+            }
+        } catch (_) {}
+    }
+
+    async function autoConfigureToken() {
+        try {
+            const res = await fetch('/api/config');
+            if (!res.ok) { updateServerStatus(false); return; }
+            const { token } = await res.json();
+            if (token) {
+                localStorage.setItem('serverToken', token);
+                updateServerStatus(true);
+                await syncProfilesFromServer();
+                syncFromServer(getCurrentProfileId());
+            }
         } catch (_) { updateServerStatus(false); }
     }
 
@@ -736,9 +781,9 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => el.remove(), 3000);
     };
 
-    // Sync serveur au démarrage
-    updateServerStatus(false); // état initial — sera mis à jour par syncFromServer
-    syncFromServer(getCurrentProfileId());
+    // Sync serveur au démarrage — récupère le token automatiquement puis les profils
+    updateServerStatus(false);
+    autoConfigureToken();
 
     // Initialiser le graphique au démarrage
     updateRecapChart();

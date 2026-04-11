@@ -16,6 +16,11 @@ const DATA_DIR = path.join(__dirname, 'server-data');
 
 app.use(express.json({ limit: '5mb', strict: false }));
 
+// ── Config publique (pas de token requis) ────────────────────────────────────
+app.get('/api/config', (req, res) => {
+    res.json({ token: TOKEN });
+});
+
 // ── Authentification ─────────────────────────────────────────────────────────
 app.use('/api', (req, res, next) => {
     if (req.headers['x-token'] !== TOKEN) {
