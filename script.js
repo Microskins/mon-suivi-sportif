@@ -305,6 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
         doSwitchProfile(id);
+        return id;
     }
 
     // ── PIN Modal ────────────────────────────────────────────
@@ -489,7 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function pushProfileToServer(profileId) {
-        const token = localStorage.getItem('serverToken');
+        const token = localStorage.getItem(`serverToken_${getCurrentProfileId()}`);
         if (!token) {
             openInfoModal('Serveur non configuré', '<p>Configure d\'abord le token serveur via le bouton <strong>Serveur</strong> en haut à droite.</p>');
             return;
@@ -558,14 +559,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     ['🚴','🚴 Cycliste'], ['🏊','🏊 Nageur'], ['⚽','⚽ Football'],
                     ['🎯','🎯 Objectif'], ['🌟','🌟 Star'], ['👤','👤 Défaut']
                 ]},
-                { key: 'pin', label: 'PIN (optionnel — 4 chiffres)', type: 'number', min: 0, placeholder: 'Laisser vide = sans PIN' },
+                { key: 'pin',         label: 'PIN (optionnel — 4 chiffres)',  type: 'number', min: 0, placeholder: 'Laisser vide = sans PIN' },
+                { key: 'serverToken', label: 'Token serveur (optionnel)',      type: 'password', placeholder: 'Laisser vide = données locales uniquement' },
             ],
-            values: { name: '', emoji: '🏃', pin: '' },
+            values: { name: '', emoji: '🏃', pin: '', serverToken: '' },
             onSave: (vals) => {
                 if (!vals.name.trim()) return;
                 const raw = String(vals.pin || '').trim();
                 const pin = raw && /^\d{4}$/.test(raw) ? raw : null;
-                createProfile(vals.name.trim(), vals.emoji || '👤', pin);
+                const id  = createProfile(vals.name.trim(), vals.emoji || '👤', pin);
+                const tok = String(vals.serverToken || '').trim();
+                if (tok) localStorage.setItem(`serverToken_${id}`, tok);
             }
         });
     }
@@ -610,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function syncToServer(key, data) {
-        const token = localStorage.getItem('serverToken');
+        const token = localStorage.getItem(`serverToken_${getCurrentProfileId()}`);
         const pid   = getCurrentProfileId();
         if (!token || !pid) return;
         try {
@@ -624,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function syncFromServer(pid) {
-        const token = localStorage.getItem('serverToken');
+        const token = localStorage.getItem(`serverToken_${getCurrentProfileId()}`);
         if (!token || !pid) return;
         try {
             const res = await fetch(`/api/${pid}`, { headers: { 'x-token': token } });
@@ -645,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     window.openServerConfig = function () {
-        const current = localStorage.getItem('serverToken') || '';
+        const current = localStorage.getItem(`serverToken_${getCurrentProfileId()}`) || '';
         openModal({
             title: 'Connexion au serveur',
             fields: [
@@ -654,8 +658,9 @@ document.addEventListener('DOMContentLoaded', function () {
             values: { token: current },
             onSave: (vals) => {
                 const t = vals.token.trim();
-                if (t) localStorage.setItem('serverToken', t);
-                else   localStorage.removeItem('serverToken');
+                const pid = getCurrentProfileId();
+                if (t) localStorage.setItem(`serverToken_${pid}`, t);
+                else   localStorage.removeItem(`serverToken_${pid}`);
                 syncFromServer(getCurrentProfileId());
             }
         });
