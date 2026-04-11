@@ -7,20 +7,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Constantes Google Fit ────────────────────────────────
     const GFIT_SCOPES = [
         'https://www.googleapis.com/auth/fitness.body.read',
-        'https://www.googleapis.com/auth/fitness.sleep.read',
-        'https://www.googleapis.com/auth/fitness.activity.read',
-        'https://www.googleapis.com/auth/fitness.nutrition.read'
+        'https://www.googleapis.com/auth/fitness.sleep.read'
     ].join(' ');
 
     const GFIT_BASE = 'https://www.googleapis.com/fitness/v1/users/me';
-
-    // Types d'activités Google Fit → notre format
-    const ACTIVITY_MAP = {
-        7: 'musculation', 8: 'cardio', 9: 'cardio', 15: 'sport-co',
-        17: 'musculation', 21: 'cardio', 29: 'musculation', 37: 'cardio',
-        41: 'sport-co', 45: 'cardio', 56: 'cardio', 59: 'musculation',
-        82: 'yoga', 97: 'cardio', 108: 'hiit'
-    };
 
     let gfitToken = null;
     let tokenClient = null;
@@ -251,7 +241,6 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             total += await importPoids(startStr, endStr);
             total += await importSommeil(startStr, endStr);
-            total += await importSeances(startStr, endStr);
             localStorage.setItem('gfitLastAutoImport', endStr);
             updateLastSyncDisplay();
             setGfitStatus(`✓ Sync : ${total} nouvelle(s) entrée(s)`, 'success');
@@ -441,105 +430,13 @@ document.addEventListener('DOMContentLoaded', function () {
         return count;
     }
 
-    // ── Import Séances depuis Google Fit ─────────────────────
-
-    async function importSeances(start, end) {
-        const sessions = await gfitGet('sessions', {
-            startTime: new Date(start).toISOString(),
-            endTime: new Date(dateToMs(end) + 86_400_000).toISOString()
-        });
-
-        const filtered = (sessions.session || []).filter(s => s.activityType !== 72);
-        if (!filtered.length) return 0;
-
-        // Récupérer les calories brûlées
-        const calData = await gfitAggregate({
-            aggregateBy: [{ dataTypeName: 'com.google.calories.expended' }],
-            bucketByTime: { durationMillis: 86_400_000 },
-            startTimeMillis: dateToMs(start),
-            endTimeMillis: dateToMs(end) + 86_400_000
-        });
-
-        const calMap = {};
-        for (const bucket of calData.bucket || []) {
-            const date = msToDate(parseInt(bucket.startTimeMillis));
-            for (const ds of bucket.dataset || []) {
-                for (const pt of ds.point || []) {
-                    calMap[date] = Math.round(pt.value?.[0]?.fpVal || 0);
-                }
-            }
-        }
-
-        const seanceData = loadData('seanceData');
-        let count = 0;
-
-        for (const session of filtered) {
-            const date = msToDate(parseInt(session.startTimeMillis));
-            const durMin = Math.round((parseInt(session.endTimeMillis) - parseInt(session.startTimeMillis)) / 60_000);
-            if (durMin < 5) continue;
-
-            const type = ACTIVITY_MAP[session.activityType] || 'autre';
-            seanceData.push({
-                date,
-                type,
-                duree: durMin,
-                kcal: calMap[date] || 0,
-                ressenti: 3,
-                exercices: session.name || ''
-            });
-            count++;
-        }
-
-        if (count > 0) saveData('seanceData', seanceData);
-        return count;
-    }
-
-    // ── Import Nutrition depuis Google Fit ───────────────────
-
-    async function importNutrition(start, end) {
-        const data = await gfitAggregate({
-            aggregateBy: [{ dataTypeName: 'com.google.nutrition' }],
-            bucketByTime: { durationMillis: 86_400_000 },
-            startTimeMillis: dateToMs(start),
-            endTimeMillis: dateToMs(end) + 86_400_000
-        });
-
-        const repasData = loadData('repasData');
-        let count = 0;
-
-        for (const bucket of data.bucket || []) {
-            const date = msToDate(parseInt(bucket.startTimeMillis));
-            for (const ds of bucket.dataset || []) {
-                for (const pt of ds.point || []) {
-                    const map = {};
-                    (pt.value || []).forEach(v => { if (v.mapVal) v.mapVal.forEach(e => { map[e.key] = e.value?.fpVal || 0; }); });
-                    const kcal = Math.round(map['calories'] || 0);
-                    if (!kcal) continue;
-                    repasData.push({
-                        date,
-                        type: 'dejeuner',
-                        aliments: pt.value?.[0]?.stringVal || '',
-                        calories: kcal,
-                        proteines: Math.round(map['protein'] || 0),
-                        glucides: Math.round(map['total_carbs'] || 0),
-                        lipides: Math.round(map['total_fat'] || 0)
-                    });
-                    count++;
-                }
-            }
-        }
-
-        if (count > 0) saveData('repasData', repasData);
-        return count;
-    }
-
     // ── Boutons import par catégorie ─────────────────────────
 
     async function runManualImport(cat) {
         const start = document.getElementById('gfit-start').value;
         const end = document.getElementById('gfit-end').value;
         const resultEl = document.getElementById('gfit-result');
-        const labels = { poids: '⚖️ Poids', sommeil: '😴 Sommeil', seances: '🏋️ Séances', nutrition: '🥗 Nutrition' };
+        const labels = { poids: '⚖️ Poids', sommeil: '😴 Sommeil' };
         const btn = document.querySelector(`.btn-import-cat[data-cat="${cat}"]`);
 
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Import en cours…'; }
@@ -549,8 +446,6 @@ document.addEventListener('DOMContentLoaded', function () {
             let count = 0;
             if (cat === 'poids') count = await importPoids(start, end);
             else if (cat === 'sommeil') count = await importSommeil(start, end);
-            else if (cat === 'seances') count = await importSeances(start, end);
-            else if (cat === 'nutrition') count = await importNutrition(start, end);
 
             resultEl.className = 'gfit-result success';
             resultEl.textContent = count > 0
