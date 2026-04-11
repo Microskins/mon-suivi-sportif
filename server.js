@@ -6,13 +6,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const express = require('express');
+const https   = require('https');
 const fs      = require('fs');
 const path    = require('path');
 
-const app      = express();
-const PORT     = process.env.PORT  || 3001;
-const TOKEN    = process.env.TOKEN || 'changeme';
-const DATA_DIR = path.join(__dirname, 'server-data');
+const app           = express();
+const PORT          = process.env.PORT          || 3001;
+const TOKEN         = process.env.TOKEN         || 'changeme';
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const DATA_DIR      = path.join(__dirname, 'server-data');
 
 app.use(express.json({ limit: '5mb', strict: false }));
 
@@ -58,6 +60,36 @@ app.post('/api/:profileId/:key', (req, res) => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file, JSON.stringify(req.body));
     res.json({ ok: true });
+});
+
+// ── POST /api/ai — proxy Anthropic (clé stockée côté serveur) ─────────────────
+app.post('/api/ai', (req, res) => {
+    if (!ANTHROPIC_KEY) {
+        return res.status(503).json({ error: 'Clé Anthropic non configurée — définir ANTHROPIC_API_KEY sur le serveur.' });
+    }
+    const body = JSON.stringify(req.body);
+    const options = {
+        hostname: 'api.anthropic.com',
+        path:     '/v1/messages',
+        method:   'POST',
+        headers: {
+            'x-api-key':           ANTHROPIC_KEY,
+            'anthropic-version':   '2023-06-01',
+            'content-type':        'application/json',
+            'content-length':      Buffer.byteLength(body)
+        }
+    };
+    const apiReq = https.request(options, (apiRes) => {
+        let data = '';
+        apiRes.on('data', chunk => data += chunk);
+        apiRes.on('end', () => {
+            try { res.status(apiRes.statusCode).json(JSON.parse(data)); }
+            catch (_) { res.status(500).json({ error: 'Réponse invalide de l\'API Anthropic' }); }
+        });
+    });
+    apiReq.on('error', (e) => res.status(500).json({ error: e.message }));
+    apiReq.write(body);
+    apiReq.end();
 });
 
 app.listen(PORT, () => {

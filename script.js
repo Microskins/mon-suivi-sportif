@@ -697,6 +697,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function autoConfigureToken() {
         try {
+            // Si un token est déjà stocké, on vérifie juste qu'il fonctionne
+            const existing = localStorage.getItem('serverToken');
+            if (existing) {
+                const check = await fetch('/api/_global/profiles', { headers: { 'x-token': existing } });
+                if (check.ok) {
+                    updateServerStatus(true);
+                    await syncProfilesFromServer();
+                    syncFromServer(getCurrentProfileId());
+                    return;
+                }
+            }
+            // Sinon on récupère le token depuis le serveur
             const res = await fetch('/api/config');
             if (!res.ok) { updateServerStatus(false); return; }
             const { token } = await res.json();

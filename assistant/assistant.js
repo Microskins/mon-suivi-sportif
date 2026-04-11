@@ -1,69 +1,28 @@
 // ============================================================
-//  ASSISTANT.JS — Chatbot IA (Claude Anthropic) en bulle flottante
+//  ASSISTANT.JS — Chatbot IA (Claude via proxy serveur)
 // ============================================================
 
 (function () {
-    const STORAGE_KEY_API = 'anthropicApiKey';
     const MODEL = 'claude-haiku-4-5-20251001';
 
     // Historique de conversation (session uniquement)
     let conversationHistory = [];
 
     // ── Éléments DOM ─────────────────────────────────────────
-    const bubble     = document.getElementById('chatBubble');
-    const panel      = document.getElementById('chatPanel');
-    const closeBtn   = document.getElementById('chatClose');
-    const apiBar     = document.getElementById('chatApiBar');
-    const apiKeyInput = document.getElementById('chatApiKey');
-    const saveKeyBtn  = document.getElementById('chatSaveKey');
-    const messages   = document.getElementById('chatMessages');
-    const input      = document.getElementById('chatInput');
-    const sendBtn    = document.getElementById('chatSend');
+    const bubble  = document.getElementById('chatBubble');
+    const panel   = document.getElementById('chatPanel');
+    const closeBtn = document.getElementById('chatClose');
+    const messages = document.getElementById('chatMessages');
+    const input   = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSend');
 
     // ── Ouvrir / fermer ──────────────────────────────────────
     bubble.addEventListener('click', () => {
         panel.classList.toggle('hidden');
-        if (!panel.classList.contains('hidden')) {
-            refreshApiBar();
-            input.focus();
-        }
+        if (!panel.classList.contains('hidden')) input.focus();
     });
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
-
-    function refreshApiBar() {
-        const key = localStorage.getItem(STORAGE_KEY_API);
-        if (key) {
-            apiBar.innerHTML = `
-                <span style="flex:1;font-size:0.8rem;color:#718096">Clé API enregistrée ✓</span>
-                <button id="chatChangeKey" style="padding:6px 10px;background:#718096;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.8rem">Modifier</button>
-            `;
-            document.getElementById('chatChangeKey').addEventListener('click', () => {
-                apiBar.innerHTML = `
-                    <input type="password" id="chatApiKey" placeholder="Clé API Anthropic (sk-ant-…)" style="flex:1;padding:6px 10px;border:1px solid #cbd5e0;border-radius:8px;font-size:0.8rem" />
-                    <button id="chatSaveKey" style="padding:6px 12px;background:#4c51bf;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.8rem">Sauvegarder</button>
-                `;
-                bindSaveKey();
-            });
-        } else {
-            bindSaveKey();
-        }
-    }
-
-    function bindSaveKey() {
-        const btn = document.getElementById('chatSaveKey');
-        if (!btn) return;
-        btn.addEventListener('click', () => {
-            const val = document.getElementById('chatApiKey').value.trim();
-            if (!val.startsWith('sk-ant-')) {
-                addMessage('error', 'Clé invalide. Elle doit commencer par "sk-ant-".');
-                return;
-            }
-            localStorage.setItem(STORAGE_KEY_API, val);
-            refreshApiBar();
-            addMessage('bot', 'Clé API sauvegardée ! Tu peux maintenant me poser tes questions.');
-        });
-    }
 
     // ── Affichage messages ───────────────────────────────────
     function addMessage(role, text) {
@@ -77,6 +36,9 @@
 
     // ── Construction du prompt système ───────────────────────
     function buildSystemPrompt() {
+        const currentId    = localStorage.getItem('currentProfileId');
+        const profiles     = JSON.parse(localStorage.getItem('profiles') || '[]');
+        const profile      = profiles.find(p => p.id === currentId);
         const bodySettings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
         const bodyHistory  = JSON.parse(localStorage.getItem('bodyHistory'))  || [];
         const sommeilData  = JSON.parse(localStorage.getItem('sommeilData'))  || [];
@@ -86,6 +48,8 @@
         let ctx = '';
 
         // Profil
+        if (profile) ctx += `\n## Profil\nNom : ${profile.name}, Sexe : ${profile.sexe || 'non renseigné'}\n`;
+
         if (bodySettings) {
             let age = '';
             if (bodySettings.age) {
@@ -98,7 +62,7 @@
                 const b = Math.round(10 * bodySettings.poids + 6.25 * bodySettings.taille - 5 * y - 78);
                 bmr = `, BMR ≈ ${b} kcal/j`;
             }
-            ctx += `\n## Profil\nPoids : ${bodySettings.poids || '?'} kg, Taille : ${bodySettings.taille || '?'} cm${age}${bmr}\n`;
+            ctx += `Poids : ${bodySettings.poids || '?'} kg, Taille : ${bodySettings.taille || '?'} cm${age}${bmr}\n`;
         }
 
         // Historique poids (10 derniers)
@@ -113,10 +77,10 @@
             const sorted = [...sommeilData].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
             ctx += `\n## Sommeil (${sorted.length} dernières nuits)\n`;
             sorted.forEach(e => {
-                const total = e.tempsTotal ? `${Math.floor(e.tempsTotal/60)}h${String(e.tempsTotal%60).padStart(2,'0')}` : '?';
+                const total   = e.tempsTotal ? `${Math.floor(e.tempsTotal/60)}h${String(e.tempsTotal%60).padStart(2,'0')}` : '?';
                 const profond = e.profond ? ` | Profond: ${Math.floor(e.profond/60)}h${String(e.profond%60).padStart(2,'0')}` : '';
-                const rem = e.rem ? ` | REM: ${Math.floor(e.rem/60)}h${String(e.rem%60).padStart(2,'0')}` : '';
-                const iah = e.apnee !== undefined && e.apnee !== '' ? ` | IAH: ${e.apnee}` : '';
+                const rem     = e.rem ? ` | REM: ${Math.floor(e.rem/60)}h${String(e.rem%60).padStart(2,'0')}` : '';
+                const iah     = e.apnee !== undefined && e.apnee !== '' ? ` | IAH: ${e.apnee}` : '';
                 ctx += `- ${e.date} : ${total}${profond}${rem}${iah}\n`;
             });
         }
@@ -127,10 +91,10 @@
             const sorted = [...repasData].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
             ctx += `\n## Repas (${sorted.length} derniers jours)\n`;
             sorted.forEach(jour => {
-                const cal = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.calories || 0), 0);
+                const cal  = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.calories  || 0), 0);
                 const prot = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.proteines || 0), 0);
-                const gluc = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.glucides || 0), 0);
-                const lip = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.lipides || 0), 0);
+                const gluc = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.glucides  || 0), 0);
+                const lip  = MEAL_KEYS.reduce((s, k) => s + (jour[k]?.lipides   || 0), 0);
                 ctx += `- ${jour.date} : ${cal} kcal | ${prot}g prot | ${gluc}g gluc | ${lip}g lip\n`;
             });
         }
@@ -145,9 +109,7 @@
             });
         }
 
-        if (!ctx) {
-            ctx = '\nAucune donnée enregistrée pour le moment.';
-        }
+        if (!ctx) ctx = '\nAucune donnée enregistrée pour le moment.';
 
         return `Tu es un assistant personnel de suivi sportif et santé bienveillant et concis.
 Réponds toujours en français. Tes réponses doivent être courtes et précises.
@@ -163,38 +125,31 @@ ${ctx}`;
         const text = input.value.trim();
         if (!text) return;
 
-        const apiKey = localStorage.getItem(STORAGE_KEY_API);
-        if (!apiKey) {
-            addMessage('error', 'Entre d\'abord ta clé API Anthropic ci-dessus.');
+        const token = localStorage.getItem('serverToken');
+        if (!token) {
+            addMessage('error', 'Connexion au serveur non établie. Recharge la page.');
             return;
         }
 
-        // Afficher le message utilisateur
         addMessage('user', text);
         input.value = '';
-
-        // Ajouter à l'historique
         conversationHistory.push({ role: 'user', content: text });
 
-        // Indicateur de chargement
         const thinking = addMessage('thinking', '…');
-
         sendBtn.disabled = true;
 
         try {
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
+            const response = await fetch('/api/ai', {
                 method: 'POST',
                 headers: {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'anthropic-dangerous-allow-browser': 'true',
                     'content-type': 'application/json',
+                    'x-token':      token
                 },
                 body: JSON.stringify({
-                    model: MODEL,
+                    model:      MODEL,
                     max_tokens: 1024,
-                    system: buildSystemPrompt(),
-                    messages: conversationHistory,
+                    system:     buildSystemPrompt(),
+                    messages:   conversationHistory,
                 }),
             });
 
@@ -202,13 +157,13 @@ ${ctx}`;
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                const msg = err?.error?.message || `Erreur ${response.status}`;
-                addMessage('error', `Erreur API : ${msg}`);
-                conversationHistory.pop(); // annuler le dernier message user
+                const msg = err?.error || err?.error?.message || `Erreur ${response.status}`;
+                addMessage('error', `Erreur : ${msg}`);
+                conversationHistory.pop();
                 return;
             }
 
-            const data = await response.json();
+            const data  = await response.json();
             const reply = data.content?.[0]?.text || '(réponse vide)';
 
             addMessage('bot', reply);
@@ -234,7 +189,6 @@ ${ctx}`;
         }
     });
 
-    // Message de bienvenue
     addMessage('bot', 'Bonjour ! Je suis ton assistant sportif. Pose-moi une question sur ton sommeil, ton poids, tes repas ou tes séances.');
 
 })();
