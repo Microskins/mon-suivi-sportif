@@ -499,11 +499,15 @@ document.addEventListener('DOMContentLoaded', function () {
         for (const key of PROFILE_DATA_KEYS) {
             const raw = localStorage.getItem(`profile_${profileId}_${key}`);
             if (raw === null) continue;
+            // S'assurer que le body est du JSON valide
+            let body;
+            try { JSON.parse(raw); body = raw; }
+            catch (_) { body = JSON.stringify(raw); }
             try {
                 const res = await fetch(`/api/${profileId}/${key}`, {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json', 'x-token': token },
-                    body:    raw
+                    body
                 });
                 res.ok ? ok++ : fail++;
             } catch (_) { fail++; }
