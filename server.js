@@ -94,6 +94,7 @@ app.post('/api/ai', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Mon Suivi Sportif — http://localhost:${PORT}`);
-    console.log(`Token   : ${TOKEN === 'changeme' ? '⚠️  Token par défaut — pensez à définir TOKEN=xxx' : '✓ défini'}`);
-    console.log(`Données : ${DATA_DIR}`);
+    console.log(`Token     : ${TOKEN === 'changeme' ? '⚠️  Token par défaut' : '✓ défini'}`);
+    console.log(`Anthropic : ${ANTHROPIC_KEY ? '✓ défini' : '⚠️  ANTHROPIC_API_KEY manquant'}`);
+    console.log(`Données   : ${DATA_DIR}`);
 });
