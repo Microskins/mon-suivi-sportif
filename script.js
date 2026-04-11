@@ -250,12 +250,335 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Utilitaires globaux ──────────────────────────────────
 
+    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport'];
+
+    function getProfiles()         { return JSON.parse(localStorage.getItem('profiles') || '[]'); }
+    function getCurrentProfileId() { return localStorage.getItem('currentProfileId') || null; }
+
+    function flushToProfile(pid) {
+        PROFILE_DATA_KEYS.forEach(key => {
+            const v = localStorage.getItem(key);
+            if (v !== null) localStorage.setItem(`profile_${pid}_${key}`, v);
+            else localStorage.removeItem(`profile_${pid}_${key}`);
+        });
+    }
+
+    function restoreFromProfile(pid) {
+        PROFILE_DATA_KEYS.forEach(key => {
+            const v = localStorage.getItem(`profile_${pid}_${key}`);
+            if (v !== null) localStorage.setItem(key, v);
+            else localStorage.removeItem(key);
+        });
+    }
+
+    // ── Changement de profil (avec vérif PIN) ───────────────
+    function switchProfile(id) {
+        const cur = getCurrentProfileId();
+        if (cur === id) { closeProfileDropdown(); return; }
+        const profile = getProfiles().find(p => p.id === id);
+        closeProfileDropdown();
+        if (profile?.pin) { showPinModal(id); return; }
+        doSwitchProfile(id);
+    }
+
+    function doSwitchProfile(id) {
+        const cur = getCurrentProfileId();
+        if (cur) flushToProfile(cur);
+        localStorage.setItem('currentProfileId', id);
+        restoreFromProfile(id);
+        renderProfileUI();
+        updateRecapChart();
+        window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+    }
+
+    function createProfile(name, emoji, pin) {
+        const profiles = getProfiles();
+        const id = 'p_' + Date.now();
+        const isFirst = profiles.length === 0;
+        profiles.push({ id, name, emoji, pin: pin || null, createdAt: new Date().toISOString() });
+        localStorage.setItem('profiles', JSON.stringify(profiles));
+        if (isFirst) {
+            PROFILE_DATA_KEYS.forEach(key => {
+                const v = localStorage.getItem(key);
+                if (v !== null) localStorage.setItem(`profile_${id}_${key}`, v);
+            });
+        }
+        doSwitchProfile(id);
+    }
+
+    // ── PIN Modal ────────────────────────────────────────────
+    let pinTarget = null;
+    let pinEntry  = '';
+
+    function showPinModal(profileId) {
+        const profile = getProfiles().find(p => p.id === profileId);
+        if (!profile) return;
+        pinTarget = profileId;
+        pinEntry  = '';
+        document.getElementById('pinProfileEmoji').textContent = profile.emoji;
+        document.getElementById('pinProfileName').textContent  = profile.name;
+        document.getElementById('pinError').textContent = '';
+        updatePinDots();
+        document.getElementById('pinModal').style.display = 'flex';
+    }
+
+    function updatePinDots() {
+        document.querySelectorAll('.pin-dot').forEach((d, i) => {
+            d.classList.toggle('filled', i < pinEntry.length);
+        });
+    }
+
+    function pinShake() {
+        document.querySelectorAll('.pin-dot').forEach(d => {
+            d.classList.add('shake');
+            d.addEventListener('animationend', () => d.classList.remove('shake'), { once: true });
+        });
+    }
+
+    function submitPin() {
+        const profile = getProfiles().find(p => p.id === pinTarget);
+        if (String(pinEntry) === String(profile.pin)) {
+            document.getElementById('pinModal').style.display = 'none';
+            doSwitchProfile(pinTarget);
+        } else {
+            document.getElementById('pinError').textContent = 'PIN incorrect — réessayez';
+            pinEntry = '';
+            updatePinDots();
+            pinShake();
+        }
+    }
+
+    // Pavé numérique
+    document.getElementById('pinModal')?.addEventListener('click', e => {
+        const digit = e.target.dataset.digit;
+        if (digit !== undefined && pinEntry.length < 4) {
+            pinEntry += digit;
+            updatePinDots();
+            document.getElementById('pinError').textContent = '';
+            if (pinEntry.length === 4) setTimeout(submitPin, 120);
+        }
+        if (e.target.id === 'pinDelete') {
+            pinEntry = pinEntry.slice(0, -1);
+            updatePinDots();
+        }
+        if (e.target.id === 'pinCancel') {
+            document.getElementById('pinModal').style.display = 'none';
+            pinTarget = null; pinEntry = '';
+        }
+    });
+
+    // Saisie clavier dans le PIN modal
+    document.addEventListener('keydown', e => {
+        if (document.getElementById('pinModal').style.display === 'none') return;
+        if (e.key >= '0' && e.key <= '9' && pinEntry.length < 4) {
+            pinEntry += e.key;
+            updatePinDots();
+            document.getElementById('pinError').textContent = '';
+            if (pinEntry.length === 4) setTimeout(submitPin, 120);
+        }
+        if (e.key === 'Backspace') { pinEntry = pinEntry.slice(0, -1); updatePinDots(); }
+        if (e.key === 'Escape') {
+            document.getElementById('pinModal').style.display = 'none';
+            pinTarget = null; pinEntry = '';
+        }
+    });
+
+    // ── Fichiers data par profil ─────────────────────────────
+
+    function exportProfileData(profileId) {
+        const profiles = getProfiles();
+        const profile  = profiles.find(p => p.id === profileId);
+        if (!profile) return;
+        // Flush si c'est le profil actif pour être sûr que tout est sauvé
+        if (getCurrentProfileId() === profileId) flushToProfile(profileId);
+
+        const data = {};
+        PROFILE_DATA_KEYS.forEach(key => {
+            const v = localStorage.getItem(`profile_${profileId}_${key}`);
+            if (v !== null) { try { data[key] = JSON.parse(v); } catch(_) {} }
+        });
+
+        const payload = { profile: { id: profile.id, name: profile.name, emoji: profile.emoji }, data, exportedAt: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `profile_${profile.id}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function seedFromDataFile(profile) {
+        try {
+            const r = await fetch(`./data/profile_${profile.id}.json`, { cache: 'no-cache' });
+            if (!r.ok) return;
+            const { data } = await r.json();
+            if (!data) return;
+            PROFILE_DATA_KEYS.forEach(key => {
+                if (data[key] !== undefined)
+                    localStorage.setItem(`profile_${profile.id}_${key}`, JSON.stringify(data[key]));
+            });
+            console.log(`[Profil] Données chargées depuis data/profile_${profile.id}.json`);
+            // Si c'est le profil actif, restaurer les clés courantes
+            if (getCurrentProfileId() === profile.id) {
+                restoreFromProfile(profile.id);
+                window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+            }
+        } catch(_) { /* fichier absent ou réseau indisponible — silencieux */ }
+    }
+
+    function closeProfileDropdown() {
+        document.getElementById('profileDropdown')?.classList.remove('open');
+        document.getElementById('profileBtn')?.setAttribute('aria-expanded', 'false');
+    }
+
+    function renderProfileUI() {
+        const profiles  = getProfiles();
+        const currentId = getCurrentProfileId();
+        const current   = profiles.find(p => p.id === currentId);
+        const btnEmoji  = document.getElementById('profileBtnEmoji');
+        const btnName   = document.getElementById('profileBtnName');
+        if (btnEmoji) btnEmoji.textContent = current?.emoji || '👤';
+        if (btnName)  btnName.textContent  = current?.name  || 'Profil';
+        const list = document.getElementById('profileList');
+        if (!list) return;
+        list.innerHTML = '';
+        profiles.forEach(p => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center';
+
+            const btn = document.createElement('button');
+            btn.className = 'profile-item' + (p.id === currentId ? ' active' : '');
+            btn.style.flex = '1';
+            btn.innerHTML = `<span>${p.emoji}</span><span style="flex:1">${p.name}</span>${p.pin ? '<span style="font-size:11px;opacity:0.5">🔒</span>' : ''}${p.id === currentId ? '<span style="font-size:11px;opacity:0.6;margin-left:4px">✓</span>' : ''}`;
+            btn.addEventListener('click', () => switchProfile(p.id));
+
+            const btnStyle = 'padding:10px 10px;background:none;border:none;cursor:pointer;font-size:13px;transition:color 0.15s;color:var(--text-3)';
+
+            const exp = document.createElement('button');
+            exp.title = 'Exporter les données';
+            exp.style.cssText = btnStyle;
+            exp.textContent = '📤';
+            exp.addEventListener('mouseenter', () => exp.style.color = 'var(--primary)');
+            exp.addEventListener('mouseleave', () => exp.style.color = 'var(--text-3)');
+            exp.addEventListener('click', (e) => { e.stopPropagation(); exportProfileData(p.id); });
+
+            const cfg = document.createElement('button');
+            cfg.title = 'Gérer le PIN';
+            cfg.style.cssText = btnStyle;
+            cfg.textContent = '⚙';
+            cfg.addEventListener('mouseenter', () => cfg.style.color = 'var(--primary)');
+            cfg.addEventListener('mouseleave', () => cfg.style.color = 'var(--text-3)');
+            cfg.addEventListener('click', (e) => { e.stopPropagation(); closeProfileDropdown(); managePin(p.id); });
+
+            row.appendChild(btn);
+            row.appendChild(exp);
+            row.appendChild(cfg);
+            list.appendChild(row);
+        });
+    }
+
+    function managePin(profileId) {
+        const profile = getProfiles().find(p => p.id === profileId);
+        if (!profile) return;
+        const hasPin = !!profile.pin;
+        openModal({
+            title: `${profile.emoji} ${profile.name} — PIN`,
+            fields: [
+                { key: 'pin', label: hasPin ? 'Nouveau PIN (vide = supprimer)' : 'PIN (4 chiffres)', type: 'number', min: 0, placeholder: '1234' }
+            ],
+            values: { pin: '' },
+            onSave: (vals) => {
+                const raw = String(vals.pin || '').trim();
+                const profiles = getProfiles();
+                const idx = profiles.findIndex(p => p.id === profileId);
+                if (idx < 0) return;
+                if (!raw) {
+                    profiles[idx].pin = null;
+                } else if (/^\d{4}$/.test(raw)) {
+                    profiles[idx].pin = raw;
+                } else {
+                    alert('Le PIN doit contenir exactement 4 chiffres.');
+                    return;
+                }
+                localStorage.setItem('profiles', JSON.stringify(profiles));
+                renderProfileUI();
+            }
+        });
+    }
+
+    function promptCreateProfile(isFirst = false) {
+        openModal({
+            title: isFirst ? '👋 Bienvenue — crée ton profil' : 'Nouveau profil',
+            fields: [
+                { key: 'name',  label: 'Prénom', type: 'text', placeholder: 'Ex: Thomas' },
+                { key: 'emoji', label: 'Avatar', type: 'select', options: [
+                    ['🏃','🏃 Coureur'], ['🧘','🧘 Yoga'], ['💪','💪 Muscu'],
+                    ['🚴','🚴 Cycliste'], ['🏊','🏊 Nageur'], ['⚽','⚽ Football'],
+                    ['🎯','🎯 Objectif'], ['🌟','🌟 Star'], ['👤','👤 Défaut']
+                ]},
+                { key: 'pin', label: 'PIN (optionnel — 4 chiffres)', type: 'number', min: 0, placeholder: 'Laisser vide = sans PIN' },
+            ],
+            values: { name: '', emoji: '🏃', pin: '' },
+            onSave: (vals) => {
+                if (!vals.name.trim()) return;
+                const raw = String(vals.pin || '').trim();
+                const pin = raw && /^\d{4}$/.test(raw) ? raw : null;
+                createProfile(vals.name.trim(), vals.emoji || '👤', pin);
+            }
+        });
+    }
+
+    document.getElementById('profileBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dd = document.getElementById('profileDropdown');
+        const isOpen = dd.classList.toggle('open');
+        document.getElementById('profileBtn').setAttribute('aria-expanded', String(isOpen));
+    });
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('profileSwitcher')?.contains(e.target)) closeProfileDropdown();
+    });
+    document.getElementById('profileAddBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeProfileDropdown();
+        promptCreateProfile(false);
+    });
+
+    renderProfileUI();
+    const _initProfiles = getProfiles();
+    if (_initProfiles.length === 0) {
+        setTimeout(() => promptCreateProfile(true), 400);
+    } else {
+        if (!getCurrentProfileId()) {
+            document.getElementById('profileDropdown')?.classList.add('open');
+        }
+        // Seed depuis data/ pour les profils qui n'ont pas encore de données locales
+        _initProfiles.forEach(p => {
+            const hasLocal = PROFILE_DATA_KEYS.some(k => localStorage.getItem(`profile_${p.id}_${k}`) !== null);
+            if (!hasLocal) seedFromDataFile(p);
+        });
+    }
+
     window.saveData = function (key, data) {
-        localStorage.setItem(key, JSON.stringify(data));
+        const json = JSON.stringify(data);
+        localStorage.setItem(key, json);
+        const pid = getCurrentProfileId();
+        if (pid) localStorage.setItem(`profile_${pid}_${key}`, json);
     };
 
     window.loadData = function (key) {
         try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+    };
+
+    window.saveBodySettings = function (settings) {
+        const json = JSON.stringify(settings);
+        localStorage.setItem('bodySettings', json);
+        const pid = getCurrentProfileId();
+        if (pid) localStorage.setItem(`profile_${pid}_bodySettings`, json);
+    };
+
+    window.loadBodySettings = function () {
+        try { return JSON.parse(localStorage.getItem('bodySettings') || 'null'); } catch { return null; }
     };
 
     window.showFeedback = function (container, message, type = 'success') {

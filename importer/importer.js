@@ -350,9 +350,9 @@ document.addEventListener('DOMContentLoaded', function () {
             saveData('bodyHistory', history);
             history.sort((a, b) => b.date.localeCompare(a.date));
             const last = history[0];
-            const saved = JSON.parse(localStorage.getItem('bodySettings') || '{}');
+            const saved = window.loadBodySettings() || {};
             saved.poids = last.poids;
-            localStorage.setItem('bodySettings', JSON.stringify(saved));
+            window.saveBodySettings(saved);
         }
         return count;
     }

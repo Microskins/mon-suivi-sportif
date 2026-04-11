@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderDisplay() {
-        const settings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+        const settings = window.loadBodySettings();
         if (!settings) { bodyDataDisplay.innerHTML = ''; return; }
 
         const imc = (settings.poids / Math.pow(settings.taille / 100, 2)).toFixed(1);
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
         historyBody.innerHTML = '';
         sorted.forEach((entry) => {
             const originalIdx = history.indexOf(entry);
-            const settings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+            const settings = window.loadBodySettings();
             const taille = settings ? settings.taille : 175;
             const imc = (entry.poids / Math.pow(taille / 100, 2)).toFixed(1);
             const row = document.createElement('tr');
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         // Sauvegarder les paramètres courants
-        localStorage.setItem('bodySettings', JSON.stringify(settings));
+        window.saveBodySettings(settings);
 
         // Ajouter une entrée dans l'historique
         const history = loadData('bodyHistory');
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Pré-remplir le formulaire avec les dernières données
-    const saved = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+    const saved = window.loadBodySettings();
     if (saved) {
         if (saved.poids) document.getElementById('poids').value = saved.poids;
         if (saved.tourTaille) document.getElementById('tour-taille').value = saved.tourTaille;
