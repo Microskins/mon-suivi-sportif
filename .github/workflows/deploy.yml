@@ -25,5 +25,6 @@ jobs:
             cd /var/www/mon-suivi-sportif
             git pull origin master
             npm install --omit=dev
-            /usr/local/bin/pm2 restart mon-suivi-sportif
+            /usr/local/bin/pm2 startOrRestart ecosystem.config.js --update-env
+            /usr/local/bin/pm2 save
             echo "✅ Déploiement réussi !"
