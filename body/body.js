@@ -77,8 +77,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderHistory() {
         const history = loadData('bodyHistory');
-        if (history.length === 0) { historyTable.style.display = 'none'; return; }
-        historyTable.style.display = '';
+        const wrap = document.getElementById('bodyHistoryTableWrap');
+        if (history.length === 0) { if (wrap) wrap.style.display = 'none'; return; }
+        if (wrap) wrap.style.display = '';
         const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
         historyBody.innerHTML = '';
         sorted.forEach((entry) => {

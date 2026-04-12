@@ -424,16 +424,24 @@ button[type="submit"]:hover {
 button[type="submit"]:active { transform: scale(0.98); }
 
 /* ====== Tables ====== */
+.table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    margin-top: 16px;
+}
 table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    margin-top: 16px;
     font-size: 13.5px;
     border-radius: var(--r-md);
     overflow: hidden;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-xs);
+    border: none;
+    box-shadow: none;
+    margin-top: 0;
 }
 
 th, td {
@@ -1291,6 +1299,27 @@ p.error {
 @media (max-width: 480px) {
     .chat-panel { width: calc(100vw - 24px); right: 12px; }
     #chatBubble { bottom: 16px; right: 16px; }
+
+    /* Tables scrollables horizontalement */
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        font-size: 12px;
+    }
+    th, td { padding: 7px 8px; white-space: nowrap; }
+    .actions-cell { white-space: nowrap; }
+
+    /* Récap Body — 1 colonne */
+    .body-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+    .body-stats .stat-card:nth-child(n) { grid-column: auto; }
+    .stat-card { padding: 14px 12px; }
+    .stat-val { font-size: 1.3rem; }
+
+    /* Mensurations — 1 colonne */
+    .mensuration-grid { grid-template-columns: 1fr; }
 }
 /* ================================================================
    THÈMES — à coller à la FIN de style.css
