@@ -12,18 +12,46 @@
     <script src="apparence/apparence.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="app-header">
-            <h1>Mon Suivi Sportif</h1>
+<div class="app-layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <span class="sidebar-logo">M</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button class="tab-button active" data-tab="accueil" title="Vue d'ensemble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+            </button>
+            <button class="tab-button" data-tab="body" title="Body">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </button>
+            <button class="tab-button" data-tab="sommeil" title="Sommeil">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            </button>
+            <button class="tab-button" data-tab="repas" title="Repas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="2" x2="8" y2="8"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="16" y1="2" x2="16" y2="8"/><path d="M7 8h10l-1 13H8L7 8z"/></svg>
+            </button>
+            <button class="tab-button" data-tab="sceances" title="Séances">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </button>
+            <button class="tab-button" data-tab="importer" title="Importer / Exporter">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M3 19h18"/></svg>
+            </button>
+            <button class="tab-button" data-tab="apparence" title="Apparence">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+            </button>
+        </nav>
+
+        <div class="sidebar-bottom">
             <button class="server-status-btn" id="serverStatusBtn" onclick="window.openServerConfig()" title="Configurer le serveur">
                 <span id="serverStatusDot" class="server-dot"></span>
-                <span>Serveur</span>
             </button>
             <div class="profile-switcher" id="profileSwitcher">
                 <button class="profile-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false">
                     <span id="profileBtnEmoji">👤</span>
-                    <span id="profileBtnName">Profil</span>
-                    <span class="profile-chevron">▾</span>
+                    <span id="profileBtnName" style="display:none">Profil</span>
                 </button>
                 <div class="profile-dropdown" id="profileDropdown" role="menu">
                     <div id="profileList"></div>
@@ -33,35 +61,76 @@
                 </div>
             </div>
         </div>
+    </aside>
 
-        <!-- Onglets -->
-        <div class="tabs">
-            <button class="tab-button active" data-tab="accueil">Accueil</button>
-            <button class="tab-button" data-tab="body">Body</button>
-            <button class="tab-button" data-tab="sommeil">Sommeil</button>
-            <button class="tab-button" data-tab="repas">Repas</button>
-            <button class="tab-button" data-tab="sceances">Séances</button>
-            <button class="tab-button" data-tab="importer">⇅ Importer</button>
-            <button class="tab-button" data-tab="apparence">🎨 Apparence</button>
-        </div>
+    <!-- ── MAIN ─────────────────────────────────────────────── -->
+    <main class="app-main">
+        <header class="app-topbar">
+            <h1 class="page-title" id="pageTitle">Vue d'ensemble</h1>
+            <div class="topbar-right">
+                <div class="period-filters" id="periodFilters">
+                    <button class="period-btn active" data-days="7">7j</button>
+                    <button class="period-btn" data-days="30">30j</button>
+                    <button class="period-btn" data-days="90">3 mois</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="tab-contents">
 
         <!-- ===== ACCUEIL ===== -->
         <div class="tab-content active" id="accueil">
-            <h2>Récapitulatif</h2>
+
+            <!-- Stat cards -->
+            <div class="dash-stats">
+                <div class="dash-stat-card" id="dashPoids">
+                    <div class="dsc-label">POIDS</div>
+                    <div class="dsc-value">—</div>
+                    <div class="dsc-sub">Aucune donnée</div>
+                    <div class="dsc-bar"><div class="dsc-fill" style="width:0%"></div></div>
+                </div>
+                <div class="dash-stat-card" id="dashImc">
+                    <div class="dsc-label">IMC</div>
+                    <div class="dsc-value">—</div>
+                    <div class="dsc-sub">—</div>
+                    <div class="dsc-bar"><div class="dsc-fill" style="width:0%"></div></div>
+                </div>
+                <div class="dash-stat-card" id="dashSommeil">
+                    <div class="dsc-label">SOMMEIL MOY.</div>
+                    <div class="dsc-value">—</div>
+                    <div class="dsc-sub">7 dernières nuits</div>
+                    <div class="dsc-bar"><div class="dsc-fill" style="width:0%"></div></div>
+                </div>
+                <div class="dash-stat-card" id="dashCalories">
+                    <div class="dsc-label">CALORIES MOY.</div>
+                    <div class="dsc-value">—</div>
+                    <div class="dsc-sub">BMR : — kcal</div>
+                    <div class="dsc-bar"><div class="dsc-fill" style="width:0%"></div></div>
+                </div>
+            </div>
+
+            <!-- Charts -->
             <div class="charts-grid">
                 <div class="chart-card">
-                    <h3>⚖️ Poids</h3>
+                    <h3>Évolution du poids</h3>
                     <canvas id="chartPoids"></canvas>
                 </div>
                 <div class="chart-card">
-                    <h3>😴 Sommeil</h3>
+                    <h3>Phases de sommeil</h3>
                     <canvas id="chartSommeil"></canvas>
                 </div>
                 <div class="chart-card chart-card--full">
-                    <h3>🔥 Bilan calorique</h3>
+                    <h3>Bilan calorique</h3>
                     <canvas id="chartCalories"></canvas>
                 </div>
             </div>
+
+            <!-- Séances récentes -->
+            <div class="dash-recent">
+                <h3 class="dash-section-title">SÉANCES RÉCENTES</h3>
+                <div id="dashSeances"><p class="chart-empty">Aucune séance enregistrée</p></div>
+            </div>
+
         </div>
 
         <!-- ===== BODY ===== -->
@@ -682,7 +751,9 @@
             </div>
         </div>
 
-    </div><!-- /.container -->
+        </div><!-- /.tab-contents -->
+    </main>
+</div><!-- /.app-layout -->
 
     <!-- Modale d'édition (partagée entre tous les modules) -->
     <div id="editModal" class="modal-overlay" style="display:none">

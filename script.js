@@ -9,6 +9,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
 
+    const PAGE_TITLES = {
+        accueil:   'Vue d\'ensemble',
+        body:      'Body',
+        sommeil:   'Sommeil',
+        repas:     'Repas',
+        sceances:  'Séances',
+        importer:  'Importer / Exporter',
+        apparence: 'Apparence'
+    };
+
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const tabId = button.getAttribute('data-tab');
@@ -19,7 +29,25 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById(tabId).classList.add('active');
             button.classList.add('active');
 
-            if (tabId === 'accueil') updateRecapChart();
+            const titleEl = document.getElementById('pageTitle');
+            if (titleEl) titleEl.textContent = PAGE_TITLES[tabId] || tabId;
+
+            const filters = document.getElementById('periodFilters');
+            if (filters) filters.classList.toggle('hidden', tabId !== 'accueil');
+
+            if (tabId === 'accueil') updateDashboard();
+        });
+    });
+
+    // ── Filtres de période ───────────────────────────────────
+    let activePeriod = 7;
+
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activePeriod = parseInt(btn.dataset.days);
+            updateDashboard();
         });
     });
 
@@ -248,6 +276,128 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // ── Dashboard ────────────────────────────────────────────
+
+    function updateDashboard() {
+        const bodyHistory  = JSON.parse(localStorage.getItem('bodyHistory')  || '[]');
+        const bodySettings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+        const sommeilData  = JSON.parse(localStorage.getItem('sommeilData')  || '[]');
+        const repasData    = JSON.parse(localStorage.getItem('repasData')    || '[]');
+        const seanceData   = JSON.parse(localStorage.getItem('seanceData')   || '[]');
+
+        const cutoff = new Date(Date.now() - activePeriod * 86400000).toISOString().split('T')[0];
+
+        function setCard(id, value, sub, fillPct) {
+            const card = document.getElementById(id);
+            if (!card) return;
+            card.querySelector('.dsc-value').textContent = value;
+            card.querySelector('.dsc-sub').textContent   = sub;
+            const fill = card.querySelector('.dsc-fill');
+            if (fill) fill.style.width = Math.min(100, Math.max(0, fillPct || 0)) + '%';
+        }
+
+        // ── Poids ────────────────────────────────────────────
+        if (bodyHistory.length > 0) {
+            const sorted = [...bodyHistory].sort((a, b) => b.date.localeCompare(a.date));
+            const latest = sorted[0];
+            const prev   = sorted[1];
+            const diff   = prev ? (latest.poids - prev.poids).toFixed(1) : null;
+            const sub    = diff === null
+                ? 'Première entrée'
+                : (+diff > 0 ? `▲ +${diff} kg vs précédent` : +diff < 0 ? `▼ ${diff} kg vs précédent` : '= stable');
+            setCard('dashPoids', `${latest.poids} kg`, sub, (latest.poids / 150) * 100);
+        }
+
+        // ── IMC ──────────────────────────────────────────────
+        if (bodySettings?.poids && bodySettings?.taille) {
+            const imc = bodySettings.poids / Math.pow(bodySettings.taille / 100, 2);
+            let cat = imc < 18.5 ? 'Insuffisance pondérale'
+                    : imc < 25   ? 'Poids normal'
+                    : imc < 30   ? 'Surpoids'
+                    :              'Obésité';
+            setCard('dashImc', imc.toFixed(1), cat, ((imc - 15) / 25) * 100);
+        }
+
+        // ── Sommeil ──────────────────────────────────────────
+        const sommeilFiltered = sommeilData.filter(e => e.date >= cutoff);
+        if (sommeilFiltered.length > 0) {
+            const avgMin = sommeilFiltered.reduce((s, e) => {
+                const t = e.tempsTotal || ((e.profond || 0) + (e.rem || 0) + (e.leger || 0));
+                return s + t;
+            }, 0) / sommeilFiltered.length;
+            const h = Math.floor(avgMin / 60);
+            const m = Math.round(avgMin % 60);
+            const n = sommeilFiltered.length;
+            setCard('dashSommeil', `${h}h${String(m).padStart(2,'0')}`,
+                `Moy. sur ${n} nuit${n > 1 ? 's' : ''}`, (avgMin / 540) * 100);
+        }
+
+        // ── Calories ─────────────────────────────────────────
+        const MEAL_KEYS = ['petitDejeuner', 'dejeuner', 'collation', 'diner'];
+        const repasFiltered = repasData.filter(e => e.date >= cutoff);
+        let bmr = 0;
+        if (bodySettings?.poids && bodySettings?.taille && bodySettings?.age) {
+            const age = new Date().getFullYear() - new Date(bodySettings.age).getFullYear();
+            bmr = Math.round(10 * bodySettings.poids + 6.25 * bodySettings.taille - 5 * age - 78);
+        }
+        if (repasFiltered.length > 0) {
+            const avgCal = repasFiltered.reduce((s, jour) => {
+                const cal = (jour.petitDejeuner !== undefined || jour.dejeuner !== undefined)
+                    ? MEAL_KEYS.reduce((a, k) => a + (jour[k]?.calories || 0), 0)
+                    : (jour.calories || 0);
+                return s + cal;
+            }, 0) / repasFiltered.length;
+            setCard('dashCalories', `${Math.round(avgCal)} kcal`,
+                bmr ? `BMR : ${bmr} kcal/j` : 'Renseigne tes données Body',
+                (avgCal / 3000) * 100);
+        } else if (bmr) {
+            setCard('dashCalories', '—', `BMR : ${bmr} kcal/j`, 0);
+        }
+
+        // ── Séances récentes ─────────────────────────────────
+        const seanceEl = document.getElementById('dashSeances');
+        if (seanceEl) {
+            const recent = [...seanceData].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+            if (recent.length === 0) {
+                seanceEl.innerHTML = '<p class="chart-empty">Aucune séance enregistrée</p>';
+            } else {
+                const TYPE_COLORS = {
+                    musculation: '#e53e3e', cardio: '#48bb78', yoga: '#9f7aea',
+                    hiit: '#f6ad55', natation: '#4299e1', 'sport-co': '#ed8936',
+                    vélo: '#ed8936', velo: '#ed8936', course: '#48bb78',
+                    stretching: '#b794f4', autre: '#718096',
+                };
+                seanceEl.innerHTML = recent.map(s => {
+                    const type  = (s.type || '').toLowerCase();
+                    const color = TYPE_COLORS[type] || '#718096';
+                    const duree = s.duree ? `${s.duree} min` : '';
+                    const kcal  = s.kcal  ? `${s.kcal} kcal` : '';
+                    const note  = s.ressenti ? `· ${s.ressenti}/5 ☆` : '';
+                    const meta  = [duree, note].filter(Boolean).join(' ');
+                    return `<div class="dash-seance-item">
+                        <span class="dsi-dot" style="background:${color}"></span>
+                        <div class="dsi-info">
+                            <div class="dsi-name">${s.date}</div>
+                            ${meta ? `<div class="dsi-meta">${meta}</div>` : ''}
+                        </div>
+                        <div class="dsi-right">
+                            <span class="dsi-type">${s.type || '—'}</span>
+                            ${kcal ? `<span class="dsi-kcal">${kcal}</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        // Rafraîchir les graphiques
+        updateRecapChart();
+    }
+
+    window.addEventListener('suivi:dataChanged', () => {
+        const active = document.querySelector('.tab-button.active');
+        if (!active || active.getAttribute('data-tab') === 'accueil') updateDashboard();
+    });
+
     // ── Utilitaires globaux ──────────────────────────────────
 
     const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData', 'chatHistory'];
@@ -287,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.setItem('currentProfileId', id);
         restoreFromProfile(id);
         renderProfileUI();
-        updateRecapChart();
+        updateDashboard();
         window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
         syncFromServer(id);
     }
@@ -811,8 +961,8 @@ document.addEventListener('DOMContentLoaded', function () {
     updateServerStatus(false);
     autoConfigureToken();
 
-    // Initialiser le graphique au démarrage
-    updateRecapChart();
+    // Initialiser le dashboard au démarrage
+    updateDashboard();
 
     // ── Modale d'édition globale ─────────────────────────────
     // Utilisation : openModal({ title, fields, values, onSave })
