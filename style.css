@@ -1290,7 +1290,8 @@ p.error {
     .tab-button { padding: 8px 12px; font-size: 12.5px; }
     th, td { padding: 9px 10px; }
     .body-stats { grid-template-columns: repeat(2, 1fr); }
-    .body-stats .stat-card:nth-child(n) { grid-column: auto; }
+    .body-stats .stat-card:nth-child(n),
+    .body-stats.has-rth .stat-card:nth-child(n) { grid-column: auto; }
     .repas-grid { grid-template-columns: 1fr; }
     .repas-date-header { flex-wrap: wrap; }
     #modalForm { grid-template-columns: 1fr; }
@@ -1310,13 +1311,15 @@ p.error {
     th, td { padding: 7px 8px; white-space: nowrap; }
     .actions-cell { white-space: nowrap; }
 
-    /* Récap Body — 1 colonne */
+    /* Récap Body — 2 colonnes, toutes nth-child remises à zéro */
     .body-stats {
         grid-template-columns: 1fr 1fr;
     }
-    .body-stats .stat-card:nth-child(n) { grid-column: auto; }
-    .stat-card { padding: 14px 12px; }
-    .stat-val { font-size: 1.3rem; }
+    .body-stats .stat-card:nth-child(n),
+    .body-stats.has-rth .stat-card:nth-child(n) { grid-column: auto; }
+    .stat-card { padding: 12px 8px; overflow: visible; }
+    .stat-val { font-size: 1.15rem; }
+    .stat-lbl { font-size: 10px; }
 
     /* Mensurations — 1 colonne */
     .mensuration-grid { grid-template-columns: 1fr; }
