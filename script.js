@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Utilitaires globaux ──────────────────────────────────
 
-    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData'];
+    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData', 'chatHistory'];
 
     function getProfiles()         { return JSON.parse(localStorage.getItem('profiles') || '[]'); }
     function getCurrentProfileId() { return localStorage.getItem('currentProfileId') || null; }
@@ -670,10 +670,24 @@ document.addEventListener('DOMContentLoaded', function () {
         const token = localStorage.getItem('serverToken');
         if (!token) return;
         try {
+            // Récupère les profils du serveur, fusionne avec les locaux (par id)
+            const res = await fetch('/api/_global/profiles', { headers: { 'x-token': token } });
+            let serverProfiles = [];
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) serverProfiles = data;
+            }
+            const local = getProfiles();
+            const merged = [...serverProfiles];
+            local.forEach(lp => {
+                const idx = merged.findIndex(sp => sp.id === lp.id);
+                if (idx >= 0) merged[idx] = lp;
+                else merged.push(lp);
+            });
             await fetch('/api/_global/profiles', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'x-token': token },
-                body:    JSON.stringify(getProfiles())
+                body:    JSON.stringify(merged)
             });
         } catch (_) {}
     }

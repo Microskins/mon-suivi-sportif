@@ -3,10 +3,31 @@
 // ============================================================
 
 (function () {
-    const MODEL = 'claude-haiku-4-5-20251001';
+    const MODEL        = 'claude-haiku-4-5-20251001';
+    const MAX_HISTORY  = 40; // messages max conservés par profil
 
-    // Historique de conversation (session uniquement)
+    // Historique de conversation (persistant par profil)
     let conversationHistory = [];
+
+    function currentProfileId() {
+        return localStorage.getItem('currentProfileId') || '_default';
+    }
+
+    function historyKey() {
+        return `profile_${currentProfileId()}_chatHistory`;
+    }
+
+    function saveHistory() {
+        const trimmed = conversationHistory.slice(-MAX_HISTORY);
+        localStorage.setItem(historyKey(), JSON.stringify(trimmed));
+    }
+
+    function loadHistory() {
+        try {
+            const raw = localStorage.getItem(historyKey());
+            return raw ? JSON.parse(raw) : [];
+        } catch (_) { return []; }
+    }
 
     // ── Éléments DOM ─────────────────────────────────────────
     const bubble  = document.getElementById('chatBubble');
@@ -16,6 +37,17 @@
     const input   = document.getElementById('chatInput');
     const sendBtn = document.getElementById('chatSend');
 
+    // ── Charger l'historique d'un profil dans l'UI ───────────
+    function renderHistory() {
+        conversationHistory = loadHistory();
+        messages.innerHTML = '';
+        if (conversationHistory.length === 0) {
+            addMessage('bot', 'Bonjour ! Je suis ton assistant sportif. Pose-moi une question sur ton sommeil, ton poids, tes repas ou tes séances.');
+        } else {
+            conversationHistory.forEach(m => addMessage(m.role === 'user' ? 'user' : 'bot', m.content));
+        }
+    }
+
     // ── Ouvrir / fermer ──────────────────────────────────────
     bubble.addEventListener('click', () => {
         panel.classList.toggle('hidden');
@@ -23,6 +55,9 @@
     });
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+    // Rechargement de l'historique au changement de profil
+    window.addEventListener('suivi:dataChanged', renderHistory);
 
     // ── Affichage messages ───────────────────────────────────
     function addMessage(role, text) {
@@ -168,6 +203,7 @@ ${ctx}`;
 
             addMessage('bot', reply);
             conversationHistory.push({ role: 'assistant', content: reply });
+            saveHistory();
 
         } catch (e) {
             thinking.remove();
@@ -189,6 +225,7 @@ ${ctx}`;
         }
     });
 
-    addMessage('bot', 'Bonjour ! Je suis ton assistant sportif. Pose-moi une question sur ton sommeil, ton poids, tes repas ou tes séances.');
+    // Chargement initial
+    renderHistory();
 
 })();
