@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="apparence/apparence.js"></script>
 </head>
 <body>
     <div class="container">
@@ -41,6 +42,7 @@
             <button class="tab-button" data-tab="repas">Repas</button>
             <button class="tab-button" data-tab="sceances">Séances</button>
             <button class="tab-button" data-tab="importer">⇅ Importer</button>
+            <button class="tab-button" data-tab="apparence">🎨 Apparence</button>
         </div>
 
         <!-- ===== ACCUEIL ===== -->
@@ -76,7 +78,7 @@
                             <label for="poids">Poids (kg) :</label>
                             <input type="number" id="poids" step="0.1" min="0" required>
 
-<label for="taille">Taille (cm) :</label>
+                            <label for="taille">Taille (cm) :</label>
                             <input type="number" id="taille" step="0.1" min="0" required>
 
                             <label for="age">Date de naissance :</label>
@@ -467,22 +469,22 @@
                         </div>
                     </details>
 
-                    <div id="gfit-import-panel" class="gfit-import-panel">
-                        <div class="date-range-row">
-                            <label>Import manuel — Période :</label>
+                    <div class="gfit-controls">
+                        <div class="gfit-date-range">
+                            <label for="gfit-start">Du</label>
                             <input type="date" id="gfit-start">
-                            <span>→</span>
+                            <label for="gfit-end">au</label>
                             <input type="date" id="gfit-end">
                         </div>
-                        <div class="gfit-import-buttons">
-                            <button class="btn-import-cat" data-cat="poids">⚖️ Poids</button>
-                            <button class="btn-import-cat" data-cat="sommeil">😴 Sommeil</button>
+                        <div class="gfit-buttons">
+                            <button class="btn-import-cat" data-cat="poids">⚖️ Importer poids</button>
+                            <button class="btn-import-cat" data-cat="sommeil">😴 Importer sommeil</button>
                         </div>
-                        <div id="gfit-result"></div>
+                        <div id="gfit-result" class="gfit-result" style="display:none"></div>
                     </div>
                 </div>
 
-                <!-- Import CSV -->
+                <!-- CSV -->
                 <div class="import-section">
                     <div class="import-section-header">
                         <div class="import-icon">📄</div>
@@ -498,7 +500,7 @@
                             <option value="auto">Détection automatique (JSON interne)</option>
                             <option value="poids">Poids (CSV générique)</option>
                             <option value="sommeil">Sommeil (CSV générique)</option>
-
+                            <option value="seances">Séances (CSV générique)</option>
                             <option value="repas">Repas (CSV générique)</option>
                             <option value="samsung-sleep">Samsung Health — Sommeil</option>
                             <option value="samsung-exercise">Samsung Health — Exercice</option>
@@ -533,9 +535,145 @@
                     </details>
                 </div>
 
+                <!-- Export -->
+                <div class="import-section">
+                    <div class="import-section-header">
+                        <div class="import-icon">💾</div>
+                        <div>
+                            <h3>Exporter mes données</h3>
+                            <p class="import-desc">Sauvegarde toutes tes données au format JSON (réimportable) ou CSV par catégorie.</p>
+                        </div>
+                    </div>
+                    <div class="export-buttons">
+                        <button class="btn-export" data-format="json">📦 Tout exporter en JSON</button>
+                        <button class="btn-export" data-format="csv-poids">⚖️ Poids CSV</button>
+                        <button class="btn-export" data-format="csv-sommeil">😴 Sommeil CSV</button>
+                        <button class="btn-export" data-format="csv-seances">🏋️ Séances CSV</button>
+                        <button class="btn-export" data-format="csv-repas">🥗 Repas CSV</button>
+                    </div>
+                </div>
+
                 <div id="importerFeedback"></div>
             </div><!-- /#importerContent -->
-            </div><!-- /.tab-content#importer -->
+        </div><!-- /.tab-content#importer -->
+
+        <!-- ===== APPARENCE ===== -->
+        <div class="tab-content" id="apparence">
+            <div class="onglet-content">
+                <h2>Apparence</h2>
+                <p style="color:var(--text-2);margin-bottom:24px;font-size:14px;">Personnalisez le thème visuel de l'application. Le choix est sauvegardé automatiquement.</p>
+
+                <div class="theme-selector-grid">
+
+                    <div class="theme-option-card" data-theme="classique" onclick="window.applyTheme('classique')">
+                        <div class="theme-preview-box">
+                            <div class="tp-sb" style="background:#26215C;">
+                                <div class="tp-logo" style="background:#7F77DD;"></div>
+                                <div class="tp-nav-dot" style="background:rgba(127,119,221,0.6);"></div>
+                                <div class="tp-nav-dot" style="background:rgba(255,255,255,0.2);"></div>
+                                <div class="tp-nav-dot" style="background:rgba(255,255,255,0.2);"></div>
+                            </div>
+                            <div class="tp-main" style="background:#f1f5f9;">
+                                <div class="tp-topbar" style="background:#fff;border-bottom:1px solid #e2e8f0;"></div>
+                                <div class="tp-cards">
+                                    <div class="tp-card" style="background:#EEEDFE;border:1px solid #AFA9EC;"></div>
+                                    <div class="tp-card" style="background:#fff;border:1px solid #e2e8f0;"></div>
+                                    <div class="tp-card" style="background:#fff;border:1px solid #e2e8f0;"></div>
+                                    <div class="tp-card" style="background:#7F77DD;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="theme-option-info">
+                            <div class="theme-option-name">
+                                <span class="theme-check-icon visible" id="check-classique">✓</span>
+                                Classique violet
+                            </div>
+                            <div class="theme-option-desc">Fond clair, accents violets — le thème actuel</div>
+                        </div>
+                    </div>
+
+                    <div class="theme-option-card" data-theme="dark" onclick="window.applyTheme('dark')">
+                        <div class="theme-preview-box">
+                            <div class="tp-sb" style="background:#0d0d18;">
+                                <div class="tp-logo" style="background:#7F77DD;"></div>
+                                <div class="tp-nav-dot" style="background:rgba(127,119,221,0.6);"></div>
+                                <div class="tp-nav-dot" style="background:rgba(255,255,255,0.12);"></div>
+                                <div class="tp-nav-dot" style="background:rgba(255,255,255,0.12);"></div>
+                            </div>
+                            <div class="tp-main" style="background:#0f0f1a;">
+                                <div class="tp-topbar" style="background:#1a1a2e;border-bottom:1px solid rgba(255,255,255,0.06);"></div>
+                                <div class="tp-cards">
+                                    <div class="tp-card" style="background:rgba(127,119,221,0.2);border:1px solid rgba(127,119,221,0.4);"></div>
+                                    <div class="tp-card" style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);"></div>
+                                    <div class="tp-card" style="background:#7F77DD;"></div>
+                                    <div class="tp-card" style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="theme-option-info">
+                            <div class="theme-option-name">
+                                <span class="theme-check-icon" id="check-dark"></span>
+                                Dark athlétique
+                            </div>
+                            <div class="theme-option-desc">Fond noir, accents violets — style fitness premium</div>
+                        </div>
+                    </div>
+
+                    <div class="theme-option-card" data-theme="vert" onclick="window.applyTheme('vert')">
+                        <div class="theme-preview-box">
+                            <div class="tp-sb" style="background:#085041;">
+                                <div class="tp-logo" style="background:#1D9E75;"></div>
+                                <div class="tp-nav-dot" style="background:rgba(29,158,117,0.6);"></div>
+                                <div class="tp-nav-dot" style="background:rgba(255,255,255,0.2);"></div>
+                                <div class="tp-nav-dot" style="background:rgba(255,255,255,0.2);"></div>
+                            </div>
+                            <div class="tp-main" style="background:#f0fdf4;">
+                                <div class="tp-topbar" style="background:#fff;border-bottom:1px solid #d1fae5;"></div>
+                                <div class="tp-cards">
+                                    <div class="tp-card" style="background:#E1F5EE;border:1px solid #5DCAA5;"></div>
+                                    <div class="tp-card" style="background:#fff;border:1px solid #d1fae5;"></div>
+                                    <div class="tp-card" style="background:#1D9E75;"></div>
+                                    <div class="tp-card" style="background:#fff;border:1px solid #d1fae5;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="theme-option-info">
+                            <div class="theme-option-name">
+                                <span class="theme-check-icon" id="check-vert"></span>
+                                Vert nature
+                            </div>
+                            <div class="theme-option-desc">Fond clair, sidebar forêt — ambiance santé</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:20px;margin-top:8px;">
+                    <h3 style="margin-bottom:16px;font-size:0.95rem;">Options d'affichage</h3>
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <label class="toggle-row">
+                            <div>
+                                <div style="font-size:13.5px;font-weight:500;color:var(--text-1);">Police plus grande</div>
+                                <div style="font-size:12px;color:var(--text-3);">Augmente légèrement la taille du texte (15px)</div>
+                            </div>
+                            <div class="toggle-switch" id="toggle-fontsize" onclick="window.toggleAppOption('fontsize', this)">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </label>
+                        <label class="toggle-row">
+                            <div>
+                                <div style="font-size:13.5px;font-weight:500;color:var(--text-1);">Animations réduites</div>
+                                <div style="font-size:12px;color:var(--text-3);">Désactive les transitions pour plus de fluidité</div>
+                            </div>
+                            <div class="toggle-switch" id="toggle-noanimation" onclick="window.toggleAppOption('noanimation', this)">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
     </div><!-- /.container -->
 
