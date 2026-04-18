@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Utilitaires globaux ──────────────────────────────────
 
-    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData', 'chatHistory'];
+    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData', 'chatHistory', 'graisseCorporelleData', 'nutritionPlan', 'programmeState', 'customFoods'];
 
     function getProfiles()         { return JSON.parse(localStorage.getItem('profiles') || '[]'); }
     function getCurrentProfileId() { return localStorage.getItem('currentProfileId') || null; }

@@ -23,6 +23,133 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'Obésité';
     }
 
+    // ── Taux de gras ──────────────────────────────────────────────────────────
+
+    function getSexe() {
+        const profiles = JSON.parse(localStorage.getItem('profiles') || '[]');
+        const currentId = localStorage.getItem('currentProfileId');
+        return profiles.find(p => p.id === currentId)?.sexe || 'homme';
+    }
+
+    function computeBodyFat(taille, cou, tailleMens, hanches, sexe) {
+        if (!taille || !cou || !tailleMens) return null;
+        if (sexe === 'femme' && !hanches) return null;
+        if (tailleMens <= cou) return null;
+        let taux;
+        if (sexe === 'femme') {
+            taux = 495 / (1.29579 - 0.35004 * Math.log10(tailleMens + hanches - cou) + 0.22100 * Math.log10(taille)) - 450;
+        } else {
+            taux = 495 / (1.0324 - 0.19077 * Math.log10(tailleMens - cou) + 0.15456 * Math.log10(taille)) - 450;
+        }
+        return Math.round(taux * 10) / 10;
+    }
+
+    function bodyFatCategorie(taux, sexe) {
+        if (sexe === 'femme') {
+            if (taux < 14) return { label: 'Athlétique', cls: 'bf-athletic' };
+            if (taux < 21) return { label: 'Fitness',    cls: 'bf-fitness'  };
+            if (taux < 32) return { label: 'Acceptable', cls: 'bf-acceptable' };
+            return            { label: 'Obèse',       cls: 'bf-obese'    };
+        } else {
+            if (taux < 6)  return { label: 'Athlétique', cls: 'bf-athletic' };
+            if (taux < 14) return { label: 'Fitness',    cls: 'bf-fitness'  };
+            if (taux < 25) return { label: 'Acceptable', cls: 'bf-acceptable' };
+            return           { label: 'Obèse',       cls: 'bf-obese'    };
+        }
+    }
+
+    function saveBodyFatEntry(date) {
+        const settings = window.loadBodySettings();
+        if (!settings?.taille) return;
+        const mensData = loadData('mensurationsData');
+        const entry = mensData.find(e => e.date === date);
+        if (!entry) return;
+        const sexe = getSexe();
+        const taux = computeBodyFat(settings.taille, entry.cou, entry.tailleMens, entry.hanches, sexe);
+        if (taux === null) return;
+        const graisseData = loadData('graisseCorporelleData');
+        const idx = graisseData.findIndex(e => e.date === date);
+        if (idx >= 0) graisseData[idx] = { date, taux };
+        else graisseData.push({ date, taux });
+        saveData('graisseCorporelleData', graisseData);
+    }
+
+    let chartGraisse = null;
+
+    function renderBodyFat() {
+        const section = document.getElementById('bodyFatSection');
+        const display = document.getElementById('bodyFatDisplay');
+        if (!section || !display) return;
+
+        const settings = window.loadBodySettings();
+        const mensData = loadData('mensurationsData');
+        const sexe = getSexe();
+
+        if (!settings?.taille || mensData.length === 0) { section.style.display = 'none'; return; }
+
+        const last = [...mensData].sort((a, b) => b.date.localeCompare(a.date))[0];
+        const taux = computeBodyFat(settings.taille, last.cou, last.tailleMens, last.hanches, sexe);
+
+        if (taux === null) { section.style.display = 'none'; return; }
+
+        section.style.display = '';
+        const cat = bodyFatCategorie(taux, sexe);
+        const maxPct = sexe === 'femme' ? 45 : 35;
+        const markerPct = Math.min(100, Math.max(0, (taux / maxPct) * 100));
+
+        const seuils = sexe === 'femme'
+            ? [{ v: 14, l: '14%' }, { v: 21, l: '21%' }, { v: 32, l: '32%' }]
+            : [{ v: 6,  l: '6%'  }, { v: 14, l: '14%' }, { v: 25, l: '25%' }];
+
+        display.innerHTML = `
+            <div class="bf-result">
+                <div class="bf-top">
+                    <span class="bf-value ${cat.cls}">${taux}%</span>
+                    <span class="bf-cat-badge ${cat.cls}">${cat.label}</span>
+                </div>
+                <div class="bf-gauge-wrap">
+                    <div class="bf-gauge">
+                        <span class="bf-marker" style="left:${markerPct}%"></span>
+                    </div>
+                    <div class="bf-gauge-labels">
+                        ${seuils.map(s => `<span style="left:${(s.v/maxPct*100).toFixed(1)}%">${s.l}</span>`).join('')}
+                    </div>
+                </div>
+            </div>`;
+
+        // Graphique historique
+        const graisseData = loadData('graisseCorporelleData');
+        const canvas = document.getElementById('chartGraisse');
+        const chartWrap = document.getElementById('bodyFatChartWrap');
+        if (!canvas) return;
+        if (graisseData.length < 2) { if (chartWrap) chartWrap.style.display = 'none'; return; }
+        if (chartWrap) chartWrap.style.display = '';
+        if (chartGraisse) { chartGraisse.destroy(); chartGraisse = null; }
+        const sorted = [...graisseData].sort((a, b) => a.date.localeCompare(b.date));
+        chartGraisse = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: sorted.map(e => e.date),
+                datasets: [{
+                    label: 'Taux de gras (%)',
+                    data: sorted.map(e => e.taux),
+                    borderColor: 'var(--primary)',
+                    backgroundColor: 'rgba(99,102,241,0.1)',
+                    tension: 0.3,
+                    pointRadius: 4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { title: { display: true, text: '%' }, min: 0 } }
+            }
+        });
+    }
+
+    // ── Stats display ─────────────────────────────────────────────────────────
+
     function renderDisplay() {
         const settings = window.loadBodySettings();
         if (!settings) { bodyDataDisplay.innerHTML = ''; return; }
@@ -39,26 +166,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (last.tailleMens && last.hanches) {
                 const rthVal = last.tailleMens / last.hanches;
                 const rth = rthVal.toFixed(2);
-
-                // Seuils selon le sexe du profil courant
                 const profiles = JSON.parse(localStorage.getItem('profiles') || '[]');
                 const currentId = localStorage.getItem('currentProfileId');
                 const profile = profiles.find(p => p.id === currentId);
                 const sexe = profile?.sexe || 'homme';
                 const seuil = sexe === 'femme' ? 0.85 : 0.90;
-
                 let rthClass, rthLabel;
-                if (rthVal <= seuil) {
-                    rthClass = 'rth-ok';
-                    rthLabel = 'Normal';
-                } else if (rthVal <= seuil + 0.09) {
-                    rthClass = 'rth-warn';
-                    rthLabel = 'Légèrement élevé';
-                } else {
-                    rthClass = 'rth-danger';
-                    rthLabel = 'Élevé';
-                }
-
+                if (rthVal <= seuil)             { rthClass = 'rth-ok';     rthLabel = 'Normal'; }
+                else if (rthVal <= seuil + 0.09) { rthClass = 'rth-warn';   rthLabel = 'Légèrement élevé'; }
+                else                             { rthClass = 'rth-danger'; rthLabel = 'Élevé'; }
                 rthCard = `<div class="stat-card ${rthClass}"><span class="stat-val">${rth}</span><span class="stat-lbl">RTH — ${rthLabel}</span></div>`;
             }
         }
@@ -115,8 +231,8 @@ document.addEventListener('DOMContentLoaded', function() {
             openModal({
                 title: 'Modifier la mesure corporelle',
                 fields: [
-                    { key: 'date',       label: 'Date',              type: 'date'   },
-                    { key: 'poids',      label: 'Poids (kg)',         type: 'number', step: 0.1, min: 0 },
+                    { key: 'date',  label: 'Date',       type: 'date'   },
+                    { key: 'poids', label: 'Poids (kg)',  type: 'number', step: 0.1, min: 0 },
                 ],
                 values: history[idx],
                 onSave: (vals) => {
@@ -136,34 +252,27 @@ document.addEventListener('DOMContentLoaded', function() {
             taille: parseFloat(document.getElementById('taille').value),
             age: document.getElementById('age').value,
         };
-
-        // Sauvegarder les paramètres courants
         window.saveBodySettings(settings);
-
-        // Ajouter une entrée dans l'historique
         const history = loadData('bodyHistory');
-        history.push({
-            date: document.getElementById('date-body').value,
-            poids: settings.poids
-        });
+        history.push({ date: document.getElementById('date-body').value, poids: settings.poids });
         saveData('bodyHistory', history);
-
         renderDisplay();
         renderHistory();
+        renderBodyFat();
         showFeedback(feedbackEl, 'Données corporelles enregistrées !');
     });
 
-    // Pré-remplir le formulaire avec les dernières données
+    // Pré-remplir le formulaire
     const saved = window.loadBodySettings();
     if (saved) {
-        if (saved.poids) document.getElementById('poids').value = saved.poids;
+        if (saved.poids)  document.getElementById('poids').value  = saved.poids;
         if (saved.taille) document.getElementById('taille').value = saved.taille;
-        if (saved.age) document.getElementById('age').value = saved.age;
-        if (saved.graisseViscerale) document.getElementById('graisse-viscerale').value = saved.graisseViscerale;
+        if (saved.age)    document.getElementById('age').value    = saved.age;
     }
 
     renderDisplay();
     renderHistory();
+    renderBodyFat();
 
     // ── Mensurations ──────────────────────────────────────────────────────────
 
@@ -173,16 +282,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getMensValues() {
         return {
-            date:      document.getElementById('date-mensuration').value,
-            epaules:   parseFloat(document.getElementById('m-epaules').value)   || null,
-            cou:       parseFloat(document.getElementById('m-cou').value)        || null,
-            poitrine:  parseFloat(document.getElementById('m-poitrine').value)   || null,
-            tailleMens:parseFloat(document.getElementById('m-taille-m').value)   || null,
-            hanches:   parseFloat(document.getElementById('m-hanches').value)    || null,
-            biceps:    parseFloat(document.getElementById('m-biceps').value)     || null,
-            avantbras: parseFloat(document.getElementById('m-avantbras').value)  || null,
-            cuisses:   parseFloat(document.getElementById('m-cuisses').value)    || null,
-            mollets:   parseFloat(document.getElementById('m-mollets').value)    || null,
+            date:       document.getElementById('date-mensuration').value,
+            epaules:    parseFloat(document.getElementById('m-epaules').value)   || null,
+            cou:        parseFloat(document.getElementById('m-cou').value)        || null,
+            poitrine:   parseFloat(document.getElementById('m-poitrine').value)   || null,
+            tailleMens: parseFloat(document.getElementById('m-taille-m').value)   || null,
+            hanches:    parseFloat(document.getElementById('m-hanches').value)    || null,
+            biceps:     parseFloat(document.getElementById('m-biceps').value)     || null,
+            avantbras:  parseFloat(document.getElementById('m-avantbras').value)  || null,
+            cuisses:    parseFloat(document.getElementById('m-cuisses').value)    || null,
+            mollets:    parseFloat(document.getElementById('m-mollets').value)    || null,
         };
     }
 
@@ -248,22 +357,23 @@ document.addEventListener('DOMContentLoaded', function() {
             data.splice(idx, 1);
             saveData('mensurationsData', data);
             renderMensurationsTable();
+            renderBodyFat();
         }
 
         if (e.target.classList.contains('btn-edit')) {
             openModal({
                 title: 'Modifier les mensurations',
                 fields: [
-                    { key: 'date',      label: 'Date',         type: 'date'   },
-                    { key: 'epaules',   label: 'Épaules (cm)', type: 'number', step: 0.1, min: 0 },
-                    { key: 'cou',       label: 'Cou (cm)',     type: 'number', step: 0.1, min: 0 },
-                    { key: 'poitrine',  label: 'Poitrine (cm)',type: 'number', step: 0.1, min: 0 },
-                    { key: 'tailleMens',label: 'Tour de taille (cm)', type: 'number', step: 0.1, min: 0 },
-                    { key: 'hanches',   label: 'Hanches (cm)', type: 'number', step: 0.1, min: 0 },
-                    { key: 'biceps',    label: 'Biceps (cm)',  type: 'number', step: 0.1, min: 0 },
-                    { key: 'avantbras', label: 'Avant-bras (cm)', type: 'number', step: 0.1, min: 0 },
-                    { key: 'cuisses',   label: 'Cuisses (cm)', type: 'number', step: 0.1, min: 0 },
-                    { key: 'mollets',   label: 'Mollets (cm)', type: 'number', step: 0.1, min: 0 },
+                    { key: 'date',       label: 'Date',                    type: 'date'   },
+                    { key: 'epaules',    label: 'Épaules (cm)',            type: 'number', step: 0.1, min: 0 },
+                    { key: 'cou',        label: 'Cou (cm)',                type: 'number', step: 0.1, min: 0 },
+                    { key: 'poitrine',   label: 'Poitrine (cm)',           type: 'number', step: 0.1, min: 0 },
+                    { key: 'tailleMens', label: 'Tour de taille (cm)',     type: 'number', step: 0.1, min: 0 },
+                    { key: 'hanches',    label: 'Hanches (cm)',            type: 'number', step: 0.1, min: 0 },
+                    { key: 'biceps',     label: 'Biceps (cm)',             type: 'number', step: 0.1, min: 0 },
+                    { key: 'avantbras',  label: 'Avant-bras (cm)',         type: 'number', step: 0.1, min: 0 },
+                    { key: 'cuisses',    label: 'Cuisses (cm)',            type: 'number', step: 0.1, min: 0 },
+                    { key: 'mollets',    label: 'Mollets (cm)',            type: 'number', step: 0.1, min: 0 },
                 ],
                 values: data[idx],
                 onSave: (vals) => {
@@ -280,8 +390,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         mollets:    parseFloat(vals.mollets)    || null,
                     };
                     saveData('mensurationsData', data);
+                    saveBodyFatEntry(vals.date);
                     renderMensurationsTable();
                     renderDisplay();
+                    renderBodyFat();
                     showFeedback(mensFeedback, 'Mensurations modifiées !');
                 }
             });
@@ -295,12 +407,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const idx = data.findIndex(d => d.date === entry.date);
         if (idx >= 0) data[idx] = entry; else data.push(entry);
         saveData('mensurationsData', data);
+        saveBodyFatEntry(entry.date);
         renderMensurationsTable();
         renderDisplay();
+        renderBodyFat();
         showFeedback(mensFeedback, 'Mensurations enregistrées !');
     });
 
     renderMensurations();
     renderMensurationsTable();
-    window.addEventListener('suivi:dataChanged', () => { renderDisplay(); renderHistory(); renderMensurations(); renderMensurationsTable(); });
+    window.addEventListener('suivi:dataChanged', () => {
+        renderDisplay();
+        renderHistory();
+        renderMensurations();
+        renderMensurationsTable();
+        renderBodyFat();
+    });
 });

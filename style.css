@@ -1597,6 +1597,69 @@ body.theme-dark #chatBubble {
 }
 
 /* ================================================================
+   TAUX DE GRAS
+   ================================================================ */
+
+.bf-result { display: flex; flex-direction: column; gap: 10px; max-width: 480px; }
+
+.bf-top { display: flex; align-items: baseline; gap: 14px; }
+
+.bf-value {
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.bf-value.bf-athletic  { color: #48bb78; }
+.bf-value.bf-fitness   { color: #4299e1; }
+.bf-value.bf-acceptable{ color: #ed8936; }
+.bf-value.bf-obese     { color: #e53e3e; }
+
+.bf-cat-badge {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1.5px solid;
+}
+.bf-cat-badge.bf-athletic  { color: #48bb78; border-color: #48bb78; background: rgba(72,187,120,0.1); }
+.bf-cat-badge.bf-fitness   { color: #4299e1; border-color: #4299e1; background: rgba(66,153,225,0.1); }
+.bf-cat-badge.bf-acceptable{ color: #ed8936; border-color: #ed8936; background: rgba(237,137,54,0.1); }
+.bf-cat-badge.bf-obese     { color: #e53e3e; border-color: #e53e3e; background: rgba(229,62,62,0.1);  }
+
+.bf-gauge-wrap { position: relative; margin-top: 4px; }
+
+.bf-gauge {
+    height: 14px;
+    border-radius: 7px;
+    background: linear-gradient(to right, #48bb78 0%, #68d391 25%, #f6e05e 45%, #ed8936 65%, #fc8181 82%, #e53e3e 100%);
+    position: relative;
+}
+
+.bf-marker {
+    position: absolute;
+    top: -5px;
+    width: 4px;
+    height: 24px;
+    background: var(--text-1);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.bf-gauge-labels {
+    position: relative;
+    height: 18px;
+    margin-top: 2px;
+}
+.bf-gauge-labels span {
+    position: absolute;
+    font-size: 10px;
+    color: var(--text-3);
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+/* ================================================================
    NOUVELLE MISE EN PAGE — SIDEBAR + MAIN
    ================================================================ */
 
