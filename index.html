@@ -36,6 +36,9 @@
             <button class="tab-button" data-tab="sceances" title="Séances">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </button>
+            <button class="tab-button" data-tab="nutrition" title="Nutrition">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            </button>
             <button class="tab-button" data-tab="importer" title="Importer / Exporter">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M3 19h18"/></svg>
             </button>
@@ -763,6 +766,36 @@
             </div>
         </div>
 
+        <!-- ===== NUTRITION ===== -->
+        <div class="tab-content" id="nutrition">
+            <div class="onglet-content">
+                <h2>Nutrition</h2>
+
+                <!-- BMR + Maintenance -->
+                <section class="nutri-section">
+                    <div class="nutri-section-header">
+                        <h3>Métabolisme de base (Katch-McArdle)</h3>
+                        <div class="nutri-activity-row">
+                            <label for="activitySelect">Niveau d'activité :</label>
+                            <select id="activitySelect" class="nutri-select"></select>
+                        </div>
+                    </div>
+                    <div id="nutritionBMR"></div>
+                </section>
+
+                <!-- Sélection du plan -->
+                <section class="nutri-section" style="margin-top:28px">
+                    <h3 style="margin-bottom:14px">Plan nutritionnel</h3>
+                    <div class="plan-type-btns">
+                        <button class="plan-type-btn active" data-plan="seche">Sèche</button>
+                        <button class="plan-type-btn" data-plan="masse">Prise de masse</button>
+                    </div>
+                    <div id="nutritionPlanWrap" style="margin-top:16px"></div>
+                    <div id="nutritionFeedback" style="margin-top:8px"></div>
+                </section>
+            </div>
+        </div>
+
         </div><!-- /.tab-contents -->
     </main>
 </div><!-- /.app-layout -->
@@ -832,5 +865,6 @@
     <script src="sceances/sceances.js"></script>
     <script src="importer/importer.js"></script>
     <script src="assistant/assistant.js"></script>
+    <script src="nutrition/nutrition.js"></script>
 </body>
 </html>

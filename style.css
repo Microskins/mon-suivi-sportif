@@ -2049,3 +2049,68 @@ body.theme-dark .dash-seance-item { background: #1a1a2e; border-color: rgba(255,
 /* Vert theme sidebar */
 body.theme-vert .sidebar { background: #085041; }
 body.theme-vert .sidebar-nav .tab-button.active { background: #1D9E75; }
+
+/* ================================================================
+   NUTRITION
+   ================================================================ */
+
+.nutri-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 24px; }
+
+.nutri-section-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.nutri-section-header h3 { margin: 0; }
+
+.nutri-activity-row { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-2); }
+.nutri-select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-1); font-size: 0.88rem; }
+
+.nutri-missing { color: var(--text-2); font-size: 0.9rem; line-height: 1.6; }
+
+.nutri-bmr-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width: 700px) { .nutri-bmr-cards { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 420px) { .nutri-bmr-cards { grid-template-columns: 1fr; } }
+
+.nutri-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.nutri-card--accent { border-color: var(--primary); }
+.nutri-card--primary { background: var(--primary); border-color: var(--primary); }
+.nutri-card--primary .nutri-card-label,
+.nutri-card--primary .nutri-card-value { color: #fff; }
+
+.nutri-card-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.nutri-card-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+.nutri-card--primary .nutri-card-value { font-size: 1.7rem; }
+
+.plan-type-btns { display: flex; gap: 8px; }
+.plan-type-btn {
+    padding: 8px 20px; border: 1.5px solid var(--border); border-radius: 20px;
+    background: var(--surface); color: var(--text-2); font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+}
+.plan-type-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.nutri-plan-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.nutri-plan-header h3 { margin: 0; }
+
+.btn-activate-plan {
+    padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--primary);
+    background: transparent; color: var(--primary); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+}
+.btn-activate-plan.active { background: var(--primary); color: #fff; }
+
+.nutri-plan-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.nutri-plan-table th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+.nutri-plan-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.nutri-week-row.nutri-training td { background: rgba(99,102,241,0.03); }
+.nutri-week-row.nutri-repos td   { background: rgba(0,0,0,0.02); }
+
+.day-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.day-badge.training { background: rgba(99,102,241,0.12); color: var(--primary); }
+.day-badge.repos    { background: rgba(0,0,0,0.06);      color: var(--text-2); }
+
+body.theme-dark .nutri-plan-table td  { background: transparent; }
+body.theme-dark .nutri-week-row.nutri-training td { background: rgba(99,102,241,0.06); }

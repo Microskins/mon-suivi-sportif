@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
         sommeil:   'Sommeil',
         repas:     'Repas',
         sceances:  'Séances',
+        nutrition: 'Nutrition',
         importer:  'Importer / Exporter',
         apparence: 'Apparence'
     };
