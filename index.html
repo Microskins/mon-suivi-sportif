@@ -36,6 +36,9 @@
             <button class="tab-button" data-tab="sceances" title="Séances">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </button>
+            <button class="tab-button" data-tab="programme" title="Programme">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+            </button>
             <button class="tab-button" data-tab="nutrition" title="Nutrition">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
             </button>
@@ -789,6 +792,53 @@
             </div>
         </div>
 
+        <!-- ===== PROGRAMME ===== -->
+        <div class="tab-content" id="programme">
+            <div class="onglet-content">
+                <h2>Programme</h2>
+
+                <!-- Sélection type de plan -->
+                <div class="prog-type-btns">
+                    <button class="prog-type-btn" data-plan="pdc">Poids du corps</button>
+                    <button class="prog-type-btn" data-plan="salle">Salle</button>
+                    <button class="prog-type-btn" data-plan="avance">Avancé 5×5</button>
+                </div>
+
+                <!-- Saisie 10RM / 1RM -->
+                <div id="progRMWrap" style="display:none; margin-top:16px"></div>
+
+                <!-- Navigation semaine + jour -->
+                <div class="prog-nav">
+                    <div class="prog-week-nav">
+                        <button id="btnPrevWeek" class="prog-nav-btn">‹ Sem.</button>
+                        <div class="prog-week-info">
+                            <span id="progWeekLabel">Semaine 1 / 4</span>
+                            <div class="prog-week-bar-bg"><div id="progWeekBar" class="prog-week-bar-fill" style="width:25%"></div></div>
+                        </div>
+                        <button id="btnNextWeek" class="prog-nav-btn">Sem. ›</button>
+                    </div>
+                    <div class="prog-day-nav">
+                        <button id="btnPrevDay" class="prog-nav-btn">‹</button>
+                        <div id="progDayTabs" class="prog-day-tabs"></div>
+                        <button id="btnNextDay" class="prog-nav-btn">›</button>
+                    </div>
+                    <div id="progDayLabel" class="prog-day-label"></div>
+                </div>
+
+                <!-- Timer de repos -->
+                <div id="restTimer" class="rest-timer" style="display:none"></div>
+
+                <!-- Liste des exercices -->
+                <div id="programmeContent" class="prog-content"></div>
+
+                <!-- Actions -->
+                <div class="prog-actions">
+                    <button id="btnSaveSeance" class="btn-primary">Enregistrer la séance</button>
+                </div>
+                <div id="programmeFeedback"></div>
+            </div>
+        </div>
+
         <!-- ===== NUTRITION ===== -->
         <div class="tab-content" id="nutrition">
             <div class="onglet-content">
@@ -889,5 +939,6 @@
     <script src="importer/importer.js"></script>
     <script src="assistant/assistant.js"></script>
     <script src="nutrition/nutrition.js"></script>
+    <script src="programme/programme.js"></script>
 </body>
 </html>

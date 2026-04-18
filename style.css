@@ -2175,3 +2175,95 @@ body.theme-vert .sidebar-nav .tab-button.active { background: #1D9E75; }
 
 body.theme-dark .nutri-plan-table td  { background: transparent; }
 body.theme-dark .nutri-week-row.nutri-training td { background: rgba(99,102,241,0.06); }
+
+/* ================================================================
+   PROGRAMME
+   ================================================================ */
+
+.prog-type-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.prog-type-btn {
+    padding: 8px 18px; border: 1.5px solid var(--border); border-radius: 20px;
+    background: var(--surface); color: var(--text-2); font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+}
+.prog-type-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* Navigation */
+.prog-nav { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+
+.prog-week-nav { display: flex; align-items: center; gap: 12px; }
+.prog-week-info { flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: center; font-size: 0.88rem; font-weight: 600; color: var(--text-1); }
+.prog-week-bar-bg { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.prog-week-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.4s ease; }
+
+.prog-day-nav { display: flex; align-items: center; gap: 8px; }
+.prog-day-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.prog-day-tab {
+    padding: 5px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text-2); font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+}
+.prog-day-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.prog-nav-btn {
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text-1); font-size: 0.85rem; cursor: pointer;
+}
+.prog-nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+.prog-day-label { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+
+/* Timer */
+.rest-timer {
+    background: var(--primary); color: #fff;
+    padding: 10px 16px; border-radius: var(--r-md);
+    font-size: 1.1rem; font-weight: 700;
+    display: inline-block; margin-bottom: 12px;
+    transition: background 0.3s;
+}
+.rest-timer.timer-done { background: #48bb78; }
+
+/* Exercices */
+.prog-content { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+.prog-exercise {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 14px 18px;
+}
+
+.prog-ex-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.prog-ex-name { font-weight: 700; font-size: 0.95rem; color: var(--text-1); }
+.prog-ex-meta { font-size: 0.78rem; color: var(--text-3); }
+
+.prog-sets { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.prog-set-check {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface-2);
+    cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    transition: all 0.15s;
+    user-select: none;
+}
+.prog-set-check input { display: none; }
+.prog-set-check.checked { background: rgba(99,102,241,0.12); border-color: var(--primary); color: var(--primary); }
+.prog-set-check.checked::before { content: '✓ '; }
+
+.prog-backoff { margin-top: 8px; font-size: 0.8rem; color: var(--text-3); font-style: italic; }
+
+/* RM inputs */
+.prog-rm-header { font-size: 0.85rem; font-weight: 600; color: var(--text-2); margin-bottom: 10px; }
+.prog-rm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.prog-rm-field { display: flex; flex-direction: column; gap: 4px; }
+.prog-rm-field label { font-size: 11px; color: var(--text-3); font-weight: 600; }
+.prog-rm-field input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-1); font-size: 0.9rem; }
+
+/* Actions */
+.prog-actions { margin-top: 16px; }
+
+/* Dark theme */
+body.theme-dark .prog-exercise { background: #1a1a2e; border-color: rgba(255,255,255,0.08); }
+body.theme-dark .prog-set-check { background: rgba(255,255,255,0.04); }
