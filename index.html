@@ -373,6 +373,29 @@
                     <button id="btn-save-repas" class="btn-primary">Enregistrer la journée</button>
                 </div>
 
+                <!-- Calculateur d'aliments -->
+                <div id="foodCalcPanel" class="food-calc-panel">
+                    <div class="food-calc-row">
+                        <div class="food-search-wrap">
+                            <input type="text" id="foodSearch" placeholder="Rechercher un aliment…" autocomplete="off">
+                            <div id="foodDropdown" class="food-dropdown" style="display:none"></div>
+                        </div>
+                        <input type="number" id="foodQty" value="100" min="1" step="1" title="Quantité (g)" style="width:80px">
+                        <span style="font-size:0.85rem;color:var(--text-2);white-space:nowrap">g pour</span>
+                        <select id="foodMealTarget">
+                            <option value="petitDejeuner">Petit-déj.</option>
+                            <option value="dejeuner">Déjeuner</option>
+                            <option value="collation">Collation</option>
+                            <option value="diner">Dîner</option>
+                        </select>
+                        <button id="foodAddBtn" class="btn-primary">Ajouter</button>
+                        <button id="foodCustomBtn" class="btn-secondary" title="Ajouter un aliment personnalisé">+ Aliment</button>
+                    </div>
+                </div>
+
+                <!-- Barre de progression macros vs plan -->
+                <div id="macroProgressWrap" style="display:none; margin-bottom:16px"></div>
+
                 <div class="repas-grid">
                     <div class="repas-card" data-meal="petitDejeuner">
                         <h4>🌅 Petit-déjeuner</h4>

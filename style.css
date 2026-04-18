@@ -2051,6 +2051,67 @@ body.theme-vert .sidebar { background: #085041; }
 body.theme-vert .sidebar-nav .tab-button.active { background: #1D9E75; }
 
 /* ================================================================
+   CALCULATEUR D'ALIMENTS
+   ================================================================ */
+
+.food-calc-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
+.food-calc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.food-search-wrap { position: relative; flex: 1; min-width: 180px; }
+.food-search-wrap input { width: 100%; }
+
+.food-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-md);
+    z-index: 200;
+    overflow: hidden;
+}
+.food-dd-item {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-1);
+}
+.food-dd-item:hover { background: var(--surface-2); }
+.food-dd-kcal { font-size: 0.78rem; color: var(--text-3); }
+
+/* Barre de progression macros */
+.macro-progress {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 14px 18px;
+}
+.mp-header { margin-bottom: 12px; font-size: 0.88rem; color: var(--text-2); }
+.mp-rows { display: flex; flex-direction: column; gap: 8px; }
+.mp-row { display: flex; align-items: center; gap: 12px; }
+.mp-label { font-size: 12px; font-weight: 600; color: var(--text-2); width: 80px; flex-shrink: 0; }
+.mp-bar-wrap { flex: 1; display: flex; align-items: center; gap: 10px; }
+.mp-bar-bg { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.mp-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+.mp-bar-text { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+/* ================================================================
    NUTRITION
    ================================================================ */
 
