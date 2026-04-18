@@ -5,6 +5,8 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     // ── Constantes Google Fit ────────────────────────────────
+    const DEFAULT_CLIENT_ID = '635078719501-ed07853meosmfsjscia3jvgkh0btsjhm.apps.googleusercontent.com';
+
     const GFIT_SCOPES = [
         'https://www.googleapis.com/auth/fitness.body.read',
         'https://www.googleapis.com/auth/fitness.sleep.read'
@@ -102,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Initialisation ───────────────────────────────────────
 
-    const savedClientId = localStorage.getItem('gfitClientId') || '';
+    const savedClientId = localStorage.getItem('gfitClientId') || DEFAULT_CLIENT_ID;
     document.getElementById('gfit-client-id').value = savedClientId;
 
     // Dates par défaut : depuis la dernière sync (ou 30 jours si jamais importé)
