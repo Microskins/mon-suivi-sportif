@@ -36,11 +36,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sexe === 'femme' && !hanches) return null;
         if (tailleMens <= cou) return null;
         let taux;
+        // Constantes ajustées pour mesures en cm (formule Hodgdon & Beckett, originalement en pouces)
         if (sexe === 'femme') {
-            taux = 495 / (1.29579 - 0.35004 * Math.log10(tailleMens + hanches - cou) + 0.22100 * Math.log10(taille)) - 450;
+            if (tailleMens + hanches - cou <= 0) return null;
+            taux = 495 / (1.34803 - 0.35004 * Math.log10(tailleMens + hanches - cou) + 0.22100 * Math.log10(taille)) - 450;
         } else {
-            taux = 495 / (1.0324 - 0.19077 * Math.log10(tailleMens - cou) + 0.15456 * Math.log10(taille)) - 450;
+            taux = 495 / (1.04706 - 0.19077 * Math.log10(tailleMens - cou) + 0.15456 * Math.log10(taille)) - 450;
         }
+        if (taux < 2 || taux > 70) return null;
         return Math.round(taux * 10) / 10;
     }
 
