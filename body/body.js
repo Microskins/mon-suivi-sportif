@@ -154,11 +154,32 @@ document.addEventListener('DOMContentLoaded', function() {
         const settings = window.loadBodySettings();
         if (!settings) { bodyDataDisplay.innerHTML = ''; return; }
 
-        const imc  = (settings.poids / Math.pow(settings.taille / 100, 2)).toFixed(1);
-        const age  = calculateAge(settings.age);
-        const bmr  = Math.round(10 * settings.poids + 6.25 * settings.taille - 5 * age - 78);
+        const imc = (settings.poids / Math.pow(settings.taille / 100, 2)).toFixed(1);
+        const age = calculateAge(settings.age);
 
-        // RTH = tailleMens / hanches (dernière mensuration)
+        // BMR : Katch-McArdle si taux de gras dispo, sinon Mifflin-St Jeor
+        const graisseData = loadData('graisseCorporelleData');
+        let bmr, bmrLabel;
+        if (graisseData.length > 0) {
+            const lastTaux = [...graisseData].sort((a, b) => b.date.localeCompare(a.date))[0].taux;
+            const masseMaigre = settings.poids * (1 - lastTaux / 100);
+            bmr = Math.round(370 + 21.6 * masseMaigre);
+            bmrLabel = 'BMR (Katch-McArdle)';
+        } else {
+            bmr = Math.round(10 * settings.poids + 6.25 * settings.taille - 5 * age - 78);
+            bmrLabel = 'BMR (Mifflin)';
+        }
+
+        // Taux de gras (stat card)
+        let graisseCard = '';
+        if (graisseData.length > 0) {
+            const lastTaux = [...graisseData].sort((a, b) => b.date.localeCompare(a.date))[0].taux;
+            const sexe = getSexe();
+            const cat = bodyFatCategorie(lastTaux, sexe);
+            graisseCard = `<div class="stat-card"><span class="stat-val ${cat.cls}">${lastTaux}%</span><span class="stat-lbl">Taux de gras — ${cat.label}</span></div>`;
+        }
+
+        // RTH
         let rthCard = '';
         const mensData = loadData('mensurationsData');
         if (mensData.length > 0) {
@@ -166,10 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (last.tailleMens && last.hanches) {
                 const rthVal = last.tailleMens / last.hanches;
                 const rth = rthVal.toFixed(2);
-                const profiles = JSON.parse(localStorage.getItem('profiles') || '[]');
-                const currentId = localStorage.getItem('currentProfileId');
-                const profile = profiles.find(p => p.id === currentId);
-                const sexe = profile?.sexe || 'homme';
+                const sexe = getSexe();
                 const seuil = sexe === 'femme' ? 0.85 : 0.90;
                 let rthClass, rthLabel;
                 if (rthVal <= seuil)             { rthClass = 'rth-ok';     rthLabel = 'Normal'; }
@@ -179,13 +197,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        const hasExtra = !!(graisseCard || rthCard);
         bodyDataDisplay.innerHTML = `
-            <div class="body-stats${rthCard ? ' has-rth' : ''}">
-                <div class="stat-card"><span class="stat-val">${settings.poids} kg</span><span class="stat-lbl">Poids</span></div>
-                <div class="stat-card"><span class="stat-val">${settings.taille} cm</span><span class="stat-lbl">Taille</span></div>
+            <div class="body-stats${hasExtra ? ' has-rth' : ''}">
                 <div class="stat-card"><span class="stat-val">${age} ans</span><span class="stat-lbl">Âge</span></div>
                 <div class="stat-card"><span class="stat-val">${imc}</span><span class="stat-lbl">IMC — ${imcCategorie(parseFloat(imc))}</span></div>
-                <div class="stat-card"><span class="stat-val">${bmr} kcal</span><span class="stat-lbl">Métabolisme de base</span></div>
+                <div class="stat-card"><span class="stat-val">${bmr} kcal</span><span class="stat-lbl">${bmrLabel}</span></div>
+                ${graisseCard}
                 ${rthCard}
             </div>
         `;
