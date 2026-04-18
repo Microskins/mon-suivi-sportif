@@ -322,12 +322,16 @@ document.addEventListener('DOMContentLoaded', function () {
             return sum + sets * (1.5 * 60 + repos);
         }, 0);
 
-        const seanceData = loadData('seanceData');
+        const dureeMin = Math.round(dureeEstimee / 60);
+    const poids = JSON.parse(localStorage.getItem('bodySettings') || 'null')?.poids || 75;
+    const kcal = Math.round(4.0 * poids * (dureeMin / 60));
+
+    const seanceData = loadData('seanceData');
         seanceData.push({
             date: new Date().toISOString().split('T')[0],
             type: 'musculation',
-            duree: Math.round(dureeEstimee / 60),
-            kcal: 0,
+            duree: dureeMin,
+            kcal,
             ressenti: 3,
             exercices: exercicesList,
         });
