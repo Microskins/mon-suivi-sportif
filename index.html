@@ -223,7 +223,7 @@
                 <h3 class="dash-section-title">SÉANCES RÉCENTES</h3>
                 <div id="dashSeances"><p class="chart-empty">Aucune séance enregistrée</p></div>
                 <h3 class="dash-section-title" style="margin-top:20px">DERNIERS RECORDS BATTUS</h3>
-                <div id="dashRecords"><p class="chart-empty">Aucun record enregistré</p></div>
+                <div id="dashRecords"><div id="dashRecordsList"><p class="chart-empty">Aucun record enregistré</p></div></div>
             </div>
 
             <!-- Objectifs actifs -->
@@ -403,6 +403,52 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                </div>
+
+                <!-- Galerie photos de progression -->
+                <div class="photos-section">
+                    <div class="photos-header">
+                        <h3>📸 Photos de progression</h3>
+                        <label class="btn-secondary btn-add-photo" for="photoInput" style="cursor:pointer">+ Ajouter</label>
+                        <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+                    </div>
+                    <p class="photos-hint">Max 20 photos · Compressées et stockées localement</p>
+                    <div id="photosGrid" class="photos-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lightbox photo -->
+        <div id="photoLightbox" class="photo-lightbox" style="display:none">
+            <div class="lightbox-overlay" id="lightboxOverlay"></div>
+            <div class="lightbox-content">
+                <button class="lightbox-close" id="lightboxClose">✕</button>
+                <img id="lightboxImg" src="" alt="">
+                <div class="lightbox-caption" id="lightboxCaption"></div>
+                <div class="lightbox-actions">
+                    <button id="btnComparePhoto" class="btn-secondary">Comparer avant/après</button>
+                    <button id="btnDeletePhoto" class="btn-secondary" style="color:var(--error)">Supprimer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparaison avant/après -->
+        <div id="compareModal" class="photo-compare-modal" style="display:none">
+            <div class="compare-overlay" id="compareOverlay"></div>
+            <div class="compare-content">
+                <button class="compare-close" id="compareClose">✕</button>
+                <h3>Avant / Après</h3>
+                <div class="compare-grid">
+                    <div>
+                        <p style="text-align:center;font-weight:600;margin-bottom:8px">Avant</p>
+                        <img id="compareImgA" src="" alt="">
+                        <select id="compareSelA" class="compare-select"></select>
+                    </div>
+                    <div>
+                        <p style="text-align:center;font-weight:600;margin-bottom:8px">Après</p>
+                        <img id="compareImgB" src="" alt="">
+                        <select id="compareSelB" class="compare-select"></select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -637,7 +683,7 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody id="recordsTableBody"></tbody>
+                        <tbody id="recordsList"></tbody>
                     </table>
                     </div>
                 </div>
@@ -953,6 +999,7 @@
                 <!-- Actions -->
                 <div class="prog-actions">
                     <button id="btnSaveSeance" class="btn-primary">Enregistrer la séance</button>
+                    <button id="btnStartWorkout" class="btn-workout-start">▶ Mode plein écran</button>
                 </div>
                 <div id="programmeFeedback"></div>
             </div>
@@ -1002,6 +1049,31 @@
         </div><!-- /.tab-contents -->
     </main>
 </div><!-- /.app-layout -->
+
+    <!-- ── Workout Overlay (Mode Plein Écran Séance) ─────── -->
+    <div id="workoutOverlay" class="workout-overlay" style="display:none">
+        <div class="wo-header">
+            <div class="wo-progress-bar"><div id="woProgressFill" class="wo-progress-fill"></div></div>
+            <div class="wo-title" id="woTitle">Séance</div>
+            <button id="woClose" class="wo-close" title="Fermer">✕</button>
+        </div>
+        <div class="wo-body">
+            <div class="wo-exercise-name" id="woExName"></div>
+            <div class="wo-exercise-meta" id="woExMeta"></div>
+            <div class="wo-series-list" id="woSeriesList"></div>
+            <div class="wo-rest-timer" id="woRestTimer" style="display:none">
+                <div class="wo-rest-label">⏱ Repos</div>
+                <div class="wo-rest-countdown" id="woRestCountdown">0</div>
+                <button id="woSkipRest" class="btn-secondary">Passer</button>
+            </div>
+        </div>
+        <div class="wo-footer">
+            <button id="woPrev" class="wo-nav-btn">‹ Préc.</button>
+            <div class="wo-ex-counter" id="woExCounter">1 / 8</div>
+            <button id="woNext" class="wo-nav-btn">Suiv. ›</button>
+        </div>
+        <button id="woFinish" class="wo-finish-btn" style="display:none">✓ Terminer la séance</button>
+    </div>
 
     <!-- Modale d'édition (partagée entre tous les modules) -->
     <div id="editModal" class="modal-overlay" style="display:none">
@@ -1065,6 +1137,7 @@
     <script src="body/body.js"></script>
     <script src="sommeil/sommeil.js"></script>
     <script src="repas/repas.js"></script>
+    <script src="records/records.js"></script>
     <script src="sceances/sceances.js"></script>
     <script src="importer/importer.js"></script>
     <script src="assistant/assistant.js"></script>

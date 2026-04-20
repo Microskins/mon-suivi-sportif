@@ -409,6 +409,144 @@ document.addEventListener('DOMContentLoaded', function () {
     // Enregistrer la séance
     document.getElementById('btnSaveSeance')?.addEventListener('click', enregistrerSeance);
 
+    // ── Mode Plein Écran Séance ───────────────────────────────────────────────
+
+    let woState = null;    // { exIdx, seriesChecked, exercises, plan, wakeLock, restInterval }
+
+    function woGetExercises() {
+        const plan = PLANS[state.type];
+        const day  = plan.days[state.day];
+        const weekIdx = state.week - 1;
+        return day.exercices.map(ex => {
+            const reps   = (ex.semaines?.[weekIdx] || []).filter(r => r !== null);
+            const weight = plan.rmKey !== undefined ? getWeight(ex, weekIdx, plan) : null;
+            return { nom: ex.nom, tempo: ex.tempo, repos: ex.repos, weight, reps };
+        });
+    }
+
+    function woUpdateProgress() {
+        const total = woState.exercises.length;
+        const pct   = total > 1 ? (woState.exIdx / (total - 1)) * 100 : 100;
+        document.getElementById('woProgressFill').style.width = pct + '%';
+        document.getElementById('woExCounter').textContent = `${woState.exIdx + 1} / ${total}`;
+        document.getElementById('woPrev').disabled = woState.exIdx === 0;
+        document.getElementById('woNext').disabled = woState.exIdx >= total - 1;
+        const isLast = woState.exIdx === total - 1;
+        document.getElementById('woFinish').style.display = isLast ? '' : 'none';
+        document.getElementById('woNext').style.display   = isLast ? 'none' : '';
+    }
+
+    function woRenderExercise() {
+        const ex = woState.exercises[woState.exIdx];
+        document.getElementById('woTitle').textContent  = PLANS[state.type].days[state.day].label;
+        document.getElementById('woExName').textContent = ex.nom;
+        const weightStr = ex.weight ? ` · ${ex.weight} kg` : '';
+        document.getElementById('woExMeta').textContent = `${ex.tempo} · ${ex.repos}${weightStr}`;
+
+        const seriesList = document.getElementById('woSeriesList');
+        seriesList.innerHTML = ex.reps.map((r, sIdx) => {
+            const key     = `wo-${woState.exIdx}-${sIdx}`;
+            const checked = !!woState.seriesChecked[key];
+            return `<label class="wo-serie-check ${checked ? 'checked' : ''}" data-key="${key}" data-repos="${ex.repos}">
+                <input type="checkbox" ${checked ? 'checked' : ''}>
+                <span>Série ${sIdx + 1} : ${r} reps</span>
+            </label>`;
+        }).join('');
+
+        woStopRest();
+        woUpdateProgress();
+    }
+
+    function woStartRest(reposStr) {
+        const seconds = parseRepos(reposStr);
+        if (!seconds) return;
+        let remaining = seconds;
+        const timerEl      = document.getElementById('woRestTimer');
+        const countdownEl  = document.getElementById('woRestCountdown');
+        timerEl.style.display = '';
+        countdownEl.textContent = remaining;
+
+        woState.restInterval = setInterval(() => {
+            remaining--;
+            const m = Math.floor(remaining / 60);
+            const s = remaining % 60;
+            countdownEl.textContent = m > 0 ? `${m}:${String(s).padStart(2,'0')}` : remaining;
+            if (remaining <= 0) woStopRest();
+        }, 1000);
+    }
+
+    function woStopRest() {
+        clearInterval(woState?.restInterval);
+        const timerEl = document.getElementById('woRestTimer');
+        if (timerEl) timerEl.style.display = 'none';
+    }
+
+    async function openWorkoutOverlay() {
+        const overlay   = document.getElementById('workoutOverlay');
+        if (!overlay) return;
+        woState = {
+            exIdx:         0,
+            seriesChecked: {},
+            exercises:     woGetExercises(),
+            restInterval:  null,
+            wakeLock:      null,
+        };
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        woRenderExercise();
+
+        try {
+            woState.wakeLock = await navigator.wakeLock?.request('screen');
+        } catch (_) {}
+    }
+
+    function closeWorkoutOverlay() {
+        const overlay = document.getElementById('workoutOverlay');
+        if (overlay) overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        woStopRest();
+        woState?.wakeLock?.release().catch(() => {});
+        woState = null;
+    }
+
+    // Délégation clics séries dans l'overlay
+    document.getElementById('woSeriesList')?.addEventListener('change', e => {
+        const label = e.target.closest('label');
+        if (!label) return;
+        const key    = label.dataset.key;
+        const repos  = label.dataset.repos;
+        const checked = e.target.checked;
+        woState.seriesChecked[key] = checked;
+        if (checked) {
+            label.classList.add('checked');
+            woStartRest(repos);
+        } else {
+            label.classList.remove('checked');
+            woStopRest();
+        }
+    });
+
+    document.getElementById('woNext')?.addEventListener('click', () => {
+        if (woState && woState.exIdx < woState.exercises.length - 1) {
+            woState.exIdx++;
+            woRenderExercise();
+        }
+    });
+    document.getElementById('woPrev')?.addEventListener('click', () => {
+        if (woState && woState.exIdx > 0) {
+            woState.exIdx--;
+            woRenderExercise();
+        }
+    });
+    document.getElementById('woClose')?.addEventListener('click', closeWorkoutOverlay);
+    document.getElementById('woSkipRest')?.addEventListener('click', woStopRest);
+    document.getElementById('woFinish')?.addEventListener('click', () => {
+        closeWorkoutOverlay();
+        enregistrerSeance();
+    });
+
+    document.getElementById('btnStartWorkout')?.addEventListener('click', openWorkoutOverlay);
+
     fullRender();
     window.addEventListener('suivi:dataChanged', () => { /* rien à re-rendre ici */ });
 });

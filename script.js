@@ -495,29 +495,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderScoreHebdo();
 
         // ── Derniers records battus ──────────────────────────
-        const dashRecordsEl = document.getElementById('dashRecords');
-        if (dashRecordsEl) {
-            const records = loadData('records', {});
-            const allPR = [];
-            Object.entries(records).forEach(([nom, hist]) => {
-                if (!Array.isArray(hist) || hist.length === 0) return;
-                const last = [...hist].sort((a, b) => b.date.localeCompare(a.date))[0];
-                allPR.push({ nom, ...last });
-            });
-            allPR.sort((a, b) => b.date.localeCompare(a.date));
-            const top3 = allPR.slice(0, 3);
-            if (top3.length === 0) {
-                dashRecordsEl.innerHTML = '<p class="chart-empty">Aucun record enregistré — note tes exercices avec le format "Squat 4x8 @100kg"</p>';
-            } else {
-                dashRecordsEl.innerHTML = top3.map(r =>
-                    `<div class="dash-record-item">
-                        <span class="dri-trophy">🏆</span>
-                        <div class="dri-info"><div class="dri-name">${r.nom}</div><div class="dri-meta">${r.date}</div></div>
-                        <div class="dri-weight">${r.poids} kg × ${r.reps}</div>
-                    </div>`
-                ).join('');
-            }
-        }
+        window.renderDashRecords?.();
 
         // ── Objectifs actifs ─────────────────────────────────
         const dashObjEl = document.getElementById('dashObjectifs');

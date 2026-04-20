@@ -444,4 +444,149 @@ document.addEventListener('DOMContentLoaded', function() {
         renderMensurationsTable();
         renderBodyFat();
     });
+
+    // ── Galerie Photos de Progression ────────────────────────────────────────
+
+    const MAX_PHOTOS = 20;
+    let lightboxPhotoId = null;
+
+    function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    const MAX = 800;
+                    let w = img.width, h = img.height;
+                    if (w > MAX || h > MAX) {
+                        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                        else       { w = Math.round(w * MAX / h); h = MAX; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.75));
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function renderPhotos() {
+        const grid = document.getElementById('photosGrid');
+        if (!grid) return;
+        const photos = loadData('photosData', []);
+
+        if (photos.length === 0) {
+            grid.innerHTML = '<p class="photos-empty">Aucune photo — clique sur "+ Ajouter" pour commencer</p>';
+            return;
+        }
+
+        grid.innerHTML = photos.map(p =>
+            `<div class="photo-thumb" data-id="${p.id}">
+                <img src="${p.dataUrl}" alt="${p.date}" loading="lazy">
+                <div class="photo-thumb-date">${p.date}</div>
+            </div>`
+        ).join('');
+    }
+
+    function openLightbox(id) {
+        const photos = loadData('photosData', []);
+        const photo  = photos.find(p => p.id === id);
+        if (!photo) return;
+        lightboxPhotoId = id;
+        document.getElementById('lightboxImg').src         = photo.dataUrl;
+        document.getElementById('lightboxCaption').textContent = photo.date;
+        document.getElementById('photoLightbox').style.display = 'flex';
+    }
+
+    function closeLightbox() {
+        document.getElementById('photoLightbox').style.display = 'none';
+        lightboxPhotoId = null;
+    }
+
+    function openCompareModal() {
+        const photos = loadData('photosData', []);
+        const makeOptions = () => photos.map(p =>
+            `<option value="${p.id}">${p.date}</option>`
+        ).join('');
+        const selA = document.getElementById('compareSelA');
+        const selB = document.getElementById('compareSelB');
+        if (!selA || !selB) return;
+        selA.innerHTML = makeOptions();
+        selB.innerHTML = makeOptions();
+        if (photos.length > 1) selB.selectedIndex = photos.length - 1;
+
+        const updateImages = () => {
+            const a = photos.find(p => p.id === selA.value);
+            const b = photos.find(p => p.id === selB.value);
+            if (a) document.getElementById('compareImgA').src = a.dataUrl;
+            if (b) document.getElementById('compareImgB').src = b.dataUrl;
+        };
+        selA.onchange = updateImages;
+        selB.onchange = updateImages;
+        updateImages();
+
+        document.getElementById('compareModal').style.display = 'flex';
+        closeLightbox();
+    }
+
+    // Upload
+    document.getElementById('photoInput')?.addEventListener('change', async (e) => {
+        const files  = Array.from(e.target.files);
+        const photos = loadData('photosData', []);
+        let added    = 0;
+
+        for (const file of files) {
+            if (photos.length + added >= MAX_PHOTOS) {
+                alert(`Maximum ${MAX_PHOTOS} photos atteint.`);
+                break;
+            }
+            const dataUrl = await compressImage(file);
+            photos.push({
+                id:      'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+                date:    new Date().toISOString().split('T')[0],
+                dataUrl,
+            });
+            added++;
+        }
+
+        if (added > 0) {
+            saveData('photosData', photos);
+            renderPhotos();
+        }
+        e.target.value = '';
+    });
+
+    // Clic sur une photo → lightbox
+    document.getElementById('photosGrid')?.addEventListener('click', (e) => {
+        const thumb = e.target.closest('.photo-thumb');
+        if (thumb) openLightbox(thumb.dataset.id);
+    });
+
+    // Lightbox actions
+    document.getElementById('lightboxOverlay')?.addEventListener('click', closeLightbox);
+    document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
+
+    document.getElementById('btnDeletePhoto')?.addEventListener('click', () => {
+        if (!lightboxPhotoId) return;
+        const photos = loadData('photosData', []).filter(p => p.id !== lightboxPhotoId);
+        saveData('photosData', photos);
+        closeLightbox();
+        renderPhotos();
+    });
+
+    document.getElementById('btnComparePhoto')?.addEventListener('click', openCompareModal);
+
+    // Compare modal
+    document.getElementById('compareOverlay')?.addEventListener('click', () => {
+        document.getElementById('compareModal').style.display = 'none';
+    });
+    document.getElementById('compareClose')?.addEventListener('click', () => {
+        document.getElementById('compareModal').style.display = 'none';
+    });
+
+    renderPhotos();
 });
