@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
         repas:     'Repas',
         sceances:  'Séances',
         programme: 'Programme',
+        objectifs: 'Objectifs',
         nutrition: 'Nutrition',
         importer:  'Importer / Exporter',
         apparence: 'Apparence'
@@ -278,6 +279,105 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // ── Score de forme hebdomadaire ──────────────────────────
+
+    function calculateScoreHebdo() {
+        const cutoff = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const sommeilData = loadData('sommeilData').filter(e => e.date >= cutoff);
+        const seanceData  = loadData('seanceData').filter(e => e.date >= cutoff);
+        const repasData   = loadData('repasData').filter(e => e.date >= cutoff);
+        const MEAL_KEYS   = ['petitDejeuner', 'dejeuner', 'collation', 'diner'];
+
+        // ── Sommeil (40 pts + 5 bonus SpO2) ─────────────────
+        let ptsSommeil = 0;
+        if (sommeilData.length > 0) {
+            const avgMin = sommeilData.reduce((s, e) => {
+                return s + (e.tempsTotal || (e.profond || 0) + (e.rem || 0) + (e.leger || 0));
+            }, 0) / sommeilData.length;
+            const avgH = avgMin / 60;
+            if (avgH >= 8)      ptsSommeil = 40;
+            else if (avgH >= 6) ptsSommeil = Math.round(20 + (avgH - 6) / 2 * 20);
+            else if (avgH >= 5) ptsSommeil = Math.round((avgH - 5) * 20);
+            else                ptsSommeil = 0;
+            const withO2 = sommeilData.filter(e => e.oxygen);
+            if (withO2.length > 0) {
+                const avgO2 = withO2.reduce((s, e) => s + e.oxygen, 0) / withO2.length;
+                if (avgO2 > 95) ptsSommeil += 5;
+            }
+        }
+
+        // ── Séances (35 pts + 5 bonus ressenti) ─────────────
+        let ptsSeances = 0;
+        const nb = seanceData.length;
+        if      (nb >= 3) ptsSeances = 35;
+        else if (nb === 2) ptsSeances = 25;
+        else if (nb === 1) ptsSeances = 12;
+        if (nb > 0) {
+            const avgRessenti = seanceData.reduce((s, e) => s + (e.ressenti || 3), 0) / nb;
+            if (avgRessenti >= 4) ptsSeances += 5;
+        }
+
+        // ── Nutrition (25 pts) ───────────────────────────────
+        let ptsNutrition = 0;
+        const joursAvecCal = repasData.filter(jour =>
+            MEAL_KEYS.reduce((s, k) => s + (jour[k]?.calories || 0), 0) > 0
+        ).length;
+        if      (joursAvecCal >= 5) ptsNutrition = 25;
+        else if (joursAvecCal >= 3) ptsNutrition = 15;
+        else if (joursAvecCal >= 1) ptsNutrition = 8;
+
+        const total = Math.min(100, ptsSommeil + ptsSeances + ptsNutrition);
+        const result = { total, ptsSommeil, ptsSeances, ptsNutrition, date: new Date().toISOString().split('T')[0] };
+        saveData('scoreHebdo', result);
+        return result;
+    }
+
+    function renderScoreHebdo() {
+        const el = document.getElementById('scoreHebdoCard');
+        if (!el) return;
+        const score = calculateScoreHebdo();
+
+        // Couleur selon score
+        const color = score.total <= 40 ? '#ef4444'
+                    : score.total <= 65 ? '#f97316'
+                    : score.total <= 85 ? '#6366f1'
+                    :                    '#10b981';
+        const label = score.total <= 40 ? 'Insuffisant'
+                    : score.total <= 65 ? 'Correct'
+                    : score.total <= 85 ? 'Bon'
+                    :                    'Excellent';
+
+        // Jauge SVG — circumference ≈ 314
+        const circ = 314;
+        const offset = circ - (score.total / 100) * circ;
+        const fill = document.getElementById('gaugeFill');
+        if (fill) { fill.style.stroke = color; fill.style.strokeDashoffset = offset; }
+
+        const valEl = document.getElementById('scoreValue');
+        if (valEl) valEl.textContent = score.total;
+
+        const lblEl = document.getElementById('scoreLabel');
+        if (lblEl) { lblEl.textContent = label; lblEl.style.color = color; }
+
+        // Mini-indicateurs
+        const maxS = 45, maxSe = 40, maxN = 25;
+        const setBar = (barId, ptsId, pts, max) => {
+            const bar = document.getElementById(barId);
+            const pt  = document.getElementById(ptsId);
+            if (bar) bar.style.width = Math.min(100, (pts / max) * 100) + '%';
+            if (pt)  pt.textContent = `${pts}/${max}`;
+        };
+        setBar('scoreBarSommeil',   'scorePtsSommeil',   score.ptsSommeil,   maxS);
+        setBar('scoreBarSeances',   'scorePtsSeances',   score.ptsSeances,   maxSe);
+        setBar('scoreBarNutrition', 'scorePtsNutrition', score.ptsNutrition, maxN);
+
+        // Couleur des barres
+        ['scoreBarSommeil','scoreBarSeances','scoreBarNutrition'].forEach(id => {
+            const b = document.getElementById(id);
+            if (b) b.style.background = color;
+        });
+    }
+
     // ── Dashboard ────────────────────────────────────────────
 
     function updateDashboard() {
@@ -391,6 +491,70 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        // ── Score de forme ───────────────────────────────────
+        renderScoreHebdo();
+
+        // ── Derniers records battus ──────────────────────────
+        const dashRecordsEl = document.getElementById('dashRecords');
+        if (dashRecordsEl) {
+            const records = loadData('records', {});
+            const allPR = [];
+            Object.entries(records).forEach(([nom, hist]) => {
+                if (!Array.isArray(hist) || hist.length === 0) return;
+                const last = [...hist].sort((a, b) => b.date.localeCompare(a.date))[0];
+                allPR.push({ nom, ...last });
+            });
+            allPR.sort((a, b) => b.date.localeCompare(a.date));
+            const top3 = allPR.slice(0, 3);
+            if (top3.length === 0) {
+                dashRecordsEl.innerHTML = '<p class="chart-empty">Aucun record enregistré — note tes exercices avec le format "Squat 4x8 @100kg"</p>';
+            } else {
+                dashRecordsEl.innerHTML = top3.map(r =>
+                    `<div class="dash-record-item">
+                        <span class="dri-trophy">🏆</span>
+                        <div class="dri-info"><div class="dri-name">${r.nom}</div><div class="dri-meta">${r.date}</div></div>
+                        <div class="dri-weight">${r.poids} kg × ${r.reps}</div>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        // ── Objectifs actifs ─────────────────────────────────
+        const dashObjEl = document.getElementById('dashObjectifs');
+        if (dashObjEl) {
+            const objectifs = loadData('objectifs', []);
+            const actifs = objectifs.filter(o => o.actif && !o.atteint)
+                .sort((a, b) => {
+                    if (!a.dateFin && !b.dateFin) return 0;
+                    if (!a.dateFin) return 1;
+                    if (!b.dateFin) return -1;
+                    return a.dateFin.localeCompare(b.dateFin);
+                }).slice(0, 3);
+            if (actifs.length === 0) {
+                dashObjEl.innerHTML = '<p class="chart-empty">Aucun objectif actif — crée-en un dans l\'onglet Objectifs</p>';
+            } else {
+                dashObjEl.innerHTML = actifs.map(o => {
+                    const pct = o.valeurCible > 0
+                        ? Math.min(100, Math.round((o.valeurActuelle / o.valeurCible) * 100))
+                        : 0;
+                    const jours = o.dateFin
+                        ? Math.max(0, Math.ceil((new Date(o.dateFin) - new Date()) / 86400000))
+                        : null;
+                    return `<div class="dash-obj-item">
+                        <div class="doi-header">
+                            <span class="doi-icon">${o.icone || '🎯'}</span>
+                            <span class="doi-title">${o.titre}</span>
+                            ${jours !== null ? `<span class="doi-deadline">J-${jours}</span>` : ''}
+                        </div>
+                        <div class="doi-bar-bg">
+                            <div class="doi-bar-fill" style="width:${pct}%;background:${o.couleur || 'var(--primary)'}"></div>
+                        </div>
+                        <div class="doi-meta">${o.valeurActuelle} / ${o.valeurCible} ${o.unite} · ${pct}%</div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
         // Rafraîchir les graphiques
         updateRecapChart();
     }
@@ -402,7 +566,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Utilitaires globaux ──────────────────────────────────
 
-    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData', 'chatHistory', 'graisseCorporelleData', 'nutritionPlan', 'programmeState', 'customFoods'];
+    const PROFILE_DATA_KEYS = ['bodySettings', 'bodyHistory', 'sommeilData', 'repasData', 'seanceData', 'gfitLastAutoImport', 'mensurationsData', 'chatHistory', 'graisseCorporelleData', 'nutritionPlan', 'programmeState', 'customFoods', 'records', 'objectifs', 'scoreHebdo'];
 
     function getProfiles()         { return JSON.parse(localStorage.getItem('profiles') || '[]'); }
     function getCurrentProfileId() { return localStorage.getItem('currentProfileId') || null; }
