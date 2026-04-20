@@ -935,8 +935,8 @@ document.addEventListener('DOMContentLoaded', function () {
         syncToServer(key, data);
     };
 
-    window.loadData = function (key) {
-        try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+    window.loadData = function (key, defaultValue = []) {
+        try { return JSON.parse(localStorage.getItem(key)) ?? defaultValue; } catch { return defaultValue; }
     };
 
     window.saveBodySettings = function (settings) {

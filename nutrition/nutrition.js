@@ -37,14 +37,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getLatestBodyFat() {
         try {
-            const data = JSON.parse(localStorage.getItem('graisseCorporelleData') || '[]');
+            const data = loadData('graisseCorporelleData');
             if (!data.length) return null;
             return [...data].sort((a, b) => b.date.localeCompare(a.date))[0].taux;
         } catch { return null; }
     }
 
     function computeBMR() {
-        const settings = JSON.parse(localStorage.getItem('bodySettings') || 'null');
+        const settings = loadData('bodySettings', null);
         if (!settings?.poids) return null;
         const tauxGras = getLatestBodyFat();
         if (tauxGras === null) return null;

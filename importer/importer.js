@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function () {
             for (const key of keys) {
                 if (!parsed[key]) continue;
                 if (key === 'bodySettings') {
-                    localStorage.setItem(key, JSON.stringify(parsed[key]));
+                    saveData(key, parsed[key]);
                 } else {
                     const existing = loadData(key);
                     const incoming = Array.isArray(parsed[key]) ? parsed[key] : [];
@@ -816,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function exportJSON() {
         const payload = {
             exportDate: new Date().toISOString(),
-            bodySettings: JSON.parse(localStorage.getItem('bodySettings') || 'null'),
+            bodySettings: loadData('bodySettings', null),
             bodyHistory: loadData('bodyHistory'),
             sommeilData: loadData('sommeilData'),
             repasData: loadData('repasData'),
