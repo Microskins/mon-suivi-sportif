@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
         objectifs: 'Objectifs',
         nutrition: 'Nutrition',
         importer:  'Importer / Exporter',
-        apparence: 'Apparence'
+        apparence: 'Apparence',
+        rapport:   'Rapport IA',
+        defis:     'Défis'
     };
 
     tabButtons.forEach(button => {

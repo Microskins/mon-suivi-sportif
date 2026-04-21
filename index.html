@@ -72,6 +72,24 @@
                     <circle cx="12" cy="12" r="2"/>
                 </svg>
             </button>
+            <button class="tab-button" data-tab="rapport" title="Rapport IA">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+            </button>
+            <button class="tab-button" data-tab="defis" title="Défis">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                    <path d="M4 22h16"/>
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                </svg>
+            </button>
             <button class="tab-button" data-tab="importer" title="Importer / Exporter">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="17 1 21 5 17 9"/>
@@ -1016,6 +1034,77 @@
             </div>
         </div>
 
+        <!-- ===== RAPPORT IA ===== -->
+        <div class="tab-content" id="rapport">
+            <div class="onglet-content">
+                <h2>Rapport IA mensuel</h2>
+                <div class="rapport-header">
+                    <div class="rapport-period-select">
+                        <label>Période analysée :</label>
+                        <select id="rapportPeriod">
+                            <option value="30">30 derniers jours</option>
+                            <option value="7">7 derniers jours</option>
+                            <option value="90">3 derniers mois</option>
+                        </select>
+                    </div>
+                    <button id="btnGenererRapport" class="btn-primary">Générer le rapport</button>
+                </div>
+                <div id="rapportApiKeyWrap" style="display:none">
+                    <div class="rapport-api-msg">
+                        <strong>Connexion serveur requise.</strong> Le serveur n'est pas encore connecté. Configure-le via le bouton en bas de la sidebar pour utiliser cette fonctionnalité.
+                    </div>
+                </div>
+                <div id="rapportLoading" style="display:none" class="rapport-loading">
+                    <div class="rapport-spinner"></div>
+                    <p>Claude analyse tes données…</p>
+                </div>
+                <div id="rapportContent" class="rapport-content" style="display:none"></div>
+                <div id="rapportHistory" class="rapport-history">
+                    <h3>Rapports précédents</h3>
+                    <div id="rapportHistoryList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== DÉFIS ===== -->
+        <div class="tab-content" id="defis">
+            <div class="onglet-content">
+                <h2>Défis et Compétition</h2>
+                <div class="defis-actions">
+                    <button id="btnNouveauDefi" class="btn-primary">+ Créer un défi</button>
+                    <button id="btnExportDefi" class="btn-secondary">Exporter mes résultats</button>
+                </div>
+                <div class="defis-section">
+                    <h3 class="dash-section-title">DÉFIS EN COURS</h3>
+                    <div id="defisActifsList"></div>
+                </div>
+                <div class="defis-section" id="classementSection" style="display:none">
+                    <div class="classement-header">
+                        <h3 class="dash-section-title" style="margin:0">CLASSEMENT</h3>
+                        <button id="btnRefreshClassement" class="btn-secondary" style="font-size:12px;padding:5px 12px">↻ Rafraîchir</button>
+                    </div>
+                    <div id="classementList"></div>
+                </div>
+                <div class="defis-section">
+                    <h3 class="dash-section-title">DÉFIS TERMINÉS</h3>
+                    <div id="defisTerminesList"></div>
+                </div>
+                <div class="defis-section">
+                    <h3 class="dash-section-title">IMPORTER LES RÉSULTATS D'UN AMI</h3>
+                    <div class="defi-import-zone">
+                        <p style="font-size:13px;color:var(--text-2);margin-bottom:12px">
+                            Ton ami exporte ses résultats depuis son appareil, tu importes le fichier ici.
+                        </p>
+                        <label class="btn-secondary" for="defiImportFile" style="cursor:pointer;display:inline-block">
+                            📂 Importer un fichier de résultats
+                            <input type="file" id="defiImportFile" accept=".json" style="display:none">
+                        </label>
+                        <div id="defiImportResult" class="defi-import-result"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== NUTRITION ===== -->
         <div class="tab-content" id="nutrition">
             <div class="onglet-content">
@@ -1144,5 +1233,7 @@
     <script src="nutrition/nutrition.js"></script>
     <script src="programme/programme.js"></script>
     <script src="objectifs/objectifs.js"></script>
+    <script src="rapport/rapport.js"></script>
+    <script src="defis/defis.js"></script>
 </body>
 </html>

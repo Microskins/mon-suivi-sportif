@@ -240,10 +240,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 backoffHtml = `<div class="prog-backoff">Back-off : ${backoff.sets}×${backoff.reps} reps${bw ? ` @ ${bw} kg` : ''}</div>`;
             }
 
+            const nomEscaped = ex.nom.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             el.innerHTML += `
                 <div class="prog-exercise">
                     <div class="prog-ex-header">
                         <span class="prog-ex-name">${ex.nom}</span>
+                        <button class="btn-yt-demo" onclick="window.openYoutubeModal('${nomEscaped}')">▶ Demo</button>
                         <span class="prog-ex-meta">${ex.tempo} · ${ex.repos}${weightStr ? ' · ' + weightStr : ''}</span>
                     </div>
                     <div class="prog-sets">${setsHtml}</div>
@@ -546,6 +548,44 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.getElementById('btnStartWorkout')?.addEventListener('click', openWorkoutOverlay);
+
+    // ── Modale YouTube ────────────────────────────────────────────────────
+    if (!document.getElementById('youtubeModal')) {
+        document.body.insertAdjacentHTML('beforeend', `
+            <div id="youtubeModal" class="yt-modal-overlay" style="display:none">
+                <div class="yt-modal-box">
+                    <div class="yt-modal-header">
+                        <span id="ytModalTitle">Exercice — tutoriel</span>
+                        <button id="ytModalClose" class="yt-close-btn" title="Fermer">✕</button>
+                    </div>
+                    <div class="yt-modal-body">
+                        <div class="yt-search-links" id="ytSearchLinks"></div>
+                        <div class="yt-tip">Clique sur un lien pour ouvrir la vidéo dans YouTube</div>
+                    </div>
+                </div>
+            </div>`);
+        document.getElementById('ytModalClose').addEventListener('click', () => {
+            document.getElementById('youtubeModal').style.display = 'none';
+        });
+        document.getElementById('youtubeModal').addEventListener('click', (e) => {
+            if (e.target.id === 'youtubeModal') e.target.style.display = 'none';
+        });
+    }
+
+    window.openYoutubeModal = function (nom) {
+        const base = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(nom);
+        const links = [
+            { label: '🎯 Technique et exécution',    suffix: '+technique+ex%C3%A9cution+musculation' },
+            { label: '🔰 Débutant — comment faire', suffix: '+d%C3%A9butant+tutoriel+musculation' },
+            { label: '⚠️ Erreurs à éviter',          suffix: '+erreurs+fr%C3%A9quentes+musculation' },
+            { label: '📈 Variantes et progressions', suffix: '+variantes+progressions+musculation' },
+        ];
+        document.getElementById('ytModalTitle').textContent = nom + ' — tutoriel';
+        document.getElementById('ytSearchLinks').innerHTML = links.map(l =>
+            `<a href="${base}${l.suffix}" target="_blank" rel="noopener" class="yt-link">${l.label}</a>`
+        ).join('');
+        document.getElementById('youtubeModal').style.display = 'flex';
+    };
 
     fullRender();
     window.addEventListener('suivi:dataChanged', () => { /* rien à re-rendre ici */ });
