@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const historyTable = document.getElementById('bodyHistoryTable');
     const historyBody = document.querySelector('#bodyHistoryTable tbody');
 
-    document.getElementById('date-body').valueAsDate = new Date();
+    document.getElementById('date-body').value = new Date().toLocaleDateString('sv');
 
     function calculateAge(birthDate) {
         const birth = new Date(birthDate);
@@ -243,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const history = loadData('bodyHistory');
 
         if (e.target.classList.contains('btn-delete')) {
+            if (!confirm('Supprimer cette mesure de poids ? Cette action est irréversible.')) return;
             history.splice(idx, 1);
             saveData('bodyHistory', history);
             renderHistory();
@@ -275,7 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         window.saveBodySettings(settings);
         const history = loadData('bodyHistory');
-        history.push({ date: document.getElementById('date-body').value, poids: settings.poids });
+        const dateBody = document.getElementById('date-body').value;
+        const existingIdx = history.findIndex(e => e.date === dateBody);
+        if (existingIdx >= 0) history[existingIdx].poids = settings.poids;
+        else history.push({ date: dateBody, poids: settings.poids });
         saveData('bodyHistory', history);
         renderDisplay();
         renderHistory();
@@ -299,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const mensFeedback = document.getElementById('mensurationFeedback');
 
-    document.getElementById('date-mensuration').valueAsDate = new Date();
+    document.getElementById('date-mensuration').value = new Date().toLocaleDateString('sv');
 
     function getMensValues() {
         return {
@@ -375,6 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = loadData('mensurationsData');
 
         if (e.target.classList.contains('btn-delete')) {
+            if (!confirm('Supprimer cette mensuration ? Cette action est irréversible.')) return;
             data.splice(idx, 1);
             saveData('mensurationsData', data);
             renderMensurationsTable();

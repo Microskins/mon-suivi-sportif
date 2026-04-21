@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('#repasTable tbody');
     const feedbackEl = document.getElementById('repasFeedback');
 
-    document.getElementById('date-repas').valueAsDate = new Date();
+    document.getElementById('date-repas').value = new Date().toLocaleDateString('sv');
 
     const MEALS = [
         { key: 'petitDejeuner', label: '🌅 Petit-déjeuner' },
@@ -312,6 +312,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const jour = data[idx];
 
         if (btn.classList.contains('btn-delete')) {
+            if (!confirm('Supprimer cette journée de repas ? Cette action est irréversible.')) return;
             data.splice(idx, 1);
             saveData('repasData', data);
             renderTable();
@@ -348,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
         saveData('repasData', data);
         renderTable();
         clearAllCards();
-        document.getElementById('date-repas').valueAsDate = new Date();
+        document.getElementById('date-repas').value = new Date().toLocaleDateString('sv');
         window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
         showFeedback(feedbackEl, 'Journée enregistrée !');
     });

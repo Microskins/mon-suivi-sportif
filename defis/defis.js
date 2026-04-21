@@ -58,9 +58,11 @@
                     .filter(e => e.date >= debut && e.date <= fin)
                     .sort((a, b) => a.date.localeCompare(b.date));
                 if (history.length < 2) return { profileId, nom, emoji, valeur: 0, unite: '%' };
-                const diff = history[0].poids - history[history.length - 1].poids;
-                const pct  = Math.round((diff / history[0].poids) * 100 * 10) / 10;
-                return { profileId, nom, emoji, valeur: Math.max(0, pct), unite: '%' };
+                const poidsDebut = history[0].poids;
+                const poidsFin   = history[history.length - 1].poids;
+                const diff = poidsDebut - poidsFin;   // positif = perte, négatif = prise
+                const pct  = Math.round((diff / poidsDebut) * 100 * 10) / 10;
+                return { profileId, nom, emoji, valeur: pct, unite: '%' };
             }
             case 'sommeil_moy': {
                 const nuits = loadProfileData(profileId, 'sommeilData', [])

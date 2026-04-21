@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sommeilTableBody = document.querySelector('#sommeilTable tbody');
     const feedbackEl = document.getElementById('sommeilFeedback');
 
-    document.getElementById('date-sommeil').valueAsDate = new Date();
+    document.getElementById('date-sommeil').value = new Date().toLocaleDateString('sv');
 
     // ── Conversion durées ────────────────────────────────────
 
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = loadData('sommeilData');
 
         if (e.target.classList.contains('btn-delete')) {
+            if (!confirm('Supprimer cette nuit de sommeil ? Cette action est irréversible.')) return;
             data.splice(idx, 1);
             saveData('sommeilData', data);
             renderTable();
@@ -155,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveData('sommeilData', data);
         renderTable();
         sommeilForm.reset();
-        document.getElementById('date-sommeil').valueAsDate = new Date();
+        document.getElementById('date-sommeil').value = new Date().toLocaleDateString('sv');
         showFeedback(feedbackEl, 'Nuit enregistrée !');
     });
 

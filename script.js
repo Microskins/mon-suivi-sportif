@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyCard('chartPoids', 'Aucune donnée de poids');
         } else {
             showCanvas('chartPoids');
-            const sorted = [...bodyHistory].sort((a, b) => a.date.localeCompare(b.date));
+            const sorted = [...bodyHistory].filter(e => e.poids != null && !isNaN(e.poids)).sort((a, b) => a.date.localeCompare(b.date));
             charts.poids = new Chart(document.getElementById('chartPoids'), {
                 type: 'line',
                 data: {
@@ -577,7 +577,10 @@ document.addEventListener('DOMContentLoaded', function () {
         doSwitchProfile(id);
     }
 
+    let _profileSwitching = false;
     function doSwitchProfile(id) {
+        if (_profileSwitching) return;
+        _profileSwitching = true;
         const cur = getCurrentProfileId();
         if (cur) flushToProfile(cur);
         localStorage.setItem('currentProfileId', id);
@@ -585,7 +588,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderProfileUI();
         updateDashboard();
         window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
-        syncFromServer(id);
+        syncFromServer(id).finally(() => { _profileSwitching = false; });
     }
 
     function createProfile(name, emoji, pin, sexe) {
@@ -749,7 +752,25 @@ document.addEventListener('DOMContentLoaded', function () {
             const btn = document.createElement('button');
             btn.className = 'profile-item' + (p.id === currentId ? ' active' : '');
             btn.style.flex = '1';
-            btn.innerHTML = `<span>${p.emoji}</span><span style="flex:1">${p.name}</span>${p.pin ? '<span style="font-size:11px;opacity:0.5">🔒</span>' : ''}${p.id === currentId ? '<span style="font-size:11px;opacity:0.6;margin-left:4px">✓</span>' : ''}`;
+            const sEmoji = document.createElement('span');
+            sEmoji.textContent = p.emoji;
+            const sName = document.createElement('span');
+            sName.style.flex = '1';
+            sName.textContent = p.name;
+            btn.appendChild(sEmoji);
+            btn.appendChild(sName);
+            if (p.pin) {
+                const sPin = document.createElement('span');
+                sPin.style.cssText = 'font-size:11px;opacity:0.5';
+                sPin.textContent = '🔒';
+                btn.appendChild(sPin);
+            }
+            if (p.id === currentId) {
+                const sCheck = document.createElement('span');
+                sCheck.style.cssText = 'font-size:11px;opacity:0.6;margin-left:4px';
+                sCheck.textContent = '✓';
+                btn.appendChild(sCheck);
+            }
             btn.addEventListener('click', () => switchProfile(p.id));
 
             const btnStyle = 'padding:10px 10px;background:none;border:none;cursor:pointer;font-size:13px;transition:color 0.15s;color:var(--text-3)';

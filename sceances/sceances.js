@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const tableBody  = document.querySelector('#seanceTable tbody');
     const feedbackEl = document.getElementById('seanceFeedback');
 
-    document.getElementById('date-seance').valueAsDate = new Date();
+    document.getElementById('date-seance').value = new Date().toLocaleDateString('sv');
 
     const typeLabels = {
         'musculation': 'Musculation',
@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = loadData('seanceData');
 
         if (btn.classList.contains('btn-delete')) {
+            if (!confirm('Supprimer cette séance ? Cette action est irréversible.')) return;
             data.splice(idx, 1);
             saveData('seanceData', data);
             renderTable();
@@ -135,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderTable();
         window.renderRecords?.();
         seanceForm.reset();
-        document.getElementById('date-seance').valueAsDate = new Date();
+        document.getElementById('date-seance').value = new Date().toLocaleDateString('sv');
         document.getElementById('ressenti').value = '3';
         window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
         showFeedback(feedbackEl, 'Séance enregistrée !');
