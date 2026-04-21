@@ -3090,6 +3090,7 @@ body.theme-vert .workout-overlay { background: #0a1a0e; }
     background: var(--surface);
     border-radius: var(--r-lg);
     width: 100%; max-width: 480px;
+    margin: 0 16px;
     overflow: hidden;
     box-shadow: 0 25px 50px rgba(0,0,0,0.3);
 }
@@ -3159,20 +3160,21 @@ body.theme-vert .workout-overlay { background: #0a1a0e; }
 .alerte-detail { font-size:12.5px; line-height:1.5; }
 .reco-list { display:flex; flex-direction:column; }
 .reco-item { display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); }
+.reco-item:last-child { border-bottom:none; padding-bottom:0; }
 .reco-num { width:24px; height:24px; border-radius:50%; background:#6366f1; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
 .reco-content { flex:1; }
 .reco-titre { font-size:13px; font-weight:600; color:var(--text-1); margin-bottom:2px; }
 .reco-action { font-size:12.5px; color:var(--text-2); line-height:1.5; }
 .reco-categorie { font-size:11px; padding:2px 7px; border-radius:99px; background:var(--primary-light); color:var(--primary-dark); font-weight:500; margin-left:6px; }
 .point-positif-card { background:#EEEDFE; border:1px solid #AFA9EC; border-radius:var(--r-lg); padding:20px 24px; color:#26215C; font-size:15px; line-height:1.6; font-style:italic; }
-.rapport-history { border-top:1px solid var(--border); padding-top:20px; }
-.rapport-history h3 { font-size:14px; font-weight:600; color:var(--text-2); margin-bottom:12px; }
+.rapport-history { border-top:1px solid var(--border); padding-top:24px; margin-top:8px; }
+.rapport-history h3 { font-size:14px; font-weight:600; color:var(--text-2); margin-bottom:14px; }
 .rapport-history-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); margin-bottom:6px; cursor:pointer; transition:border-color 0.15s; }
 .rapport-history-item:hover { border-color:var(--primary); }
 .rapport-history-date { font-size:13px; color:var(--text-1); font-weight:500; }
 .rapport-history-meta { font-size:12px; color:var(--text-3); }
 .rapport-history-score { font-size:14px; font-weight:700; color:#6366f1; }
-.rapport-api-msg { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:20px; color:var(--text-2); font-size:13.5px; line-height:1.6; }
+.rapport-api-msg { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:20px; color:var(--text-2); font-size:13.5px; line-height:1.6; margin-bottom:24px; }
 
 /* ── Défis et Compétition ───────────────────────────────────────────── */
 .defis-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
@@ -3186,7 +3188,8 @@ body.theme-vert .workout-overlay { background: #0a1a0e; }
 .defi-dates { font-size:12px; color:var(--text-3); }
 .defi-participants { font-size:12px; color:var(--text-2); margin-top:4px; }
 .defi-vide { font-size:13px; color:var(--text-3); padding:16px 0; text-align:center; }
-.classement-row { display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:var(--r-md); margin-bottom:6px; background:var(--surface-2); border:1px solid var(--border); }
+.classement-row { display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:var(--r-md); margin-bottom:8px; background:var(--surface-2); border:1px solid var(--border); }
+.classement-row:last-child { margin-bottom:0; }
 .classement-row.moi { background:#EEEDFE; border-color:#AFA9EC; }
 .classement-rang { font-size:1.2rem; width:32px; text-align:center; }
 .classement-profil { flex:1; }
