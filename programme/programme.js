@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Timer de repos ────────────────────────────────────────────────────────
 
-    let timerInterval = null;
+    let _timerToken = 0;
     let timerRemaining = 0;
 
     function parseRepos(str) {
@@ -157,18 +157,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function startTimer(seconds) {
-        clearInterval(timerInterval);
+        _timerToken++;                      // invalide tout tick précédent
         timerRemaining = seconds;
         renderTimer();
-        timerInterval = setInterval(() => {
-            timerRemaining--;
-            renderTimer();
-            if (timerRemaining <= 0) {
-                clearInterval(timerInterval);
-                const timerEl = document.getElementById('restTimer');
-                if (timerEl) timerEl.classList.add('timer-done');
-            }
-        }, 1000);
+        const token = _timerToken;
+        (function tick() {
+            setTimeout(() => {
+                if (_timerToken !== token) return;  // annulé
+                timerRemaining--;
+                renderTimer();
+                if (timerRemaining > 0) {
+                    tick();
+                } else {
+                    const timerEl = document.getElementById('restTimer');
+                    if (timerEl) timerEl.classList.add('timer-done');
+                }
+            }, 1000);
+        })();
     }
 
     function renderTimer() {
