@@ -2233,7 +2233,8 @@ body.theme-dark .nutri-week-row.nutri-training td { background: rgba(99,102,241,
     padding: 14px 18px;
 }
 
-.prog-ex-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.prog-ex-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.prog-ex-left { display: flex; align-items: center; gap: 8px; }
 .prog-ex-name { font-weight: 700; font-size: 0.95rem; color: var(--text-1); }
 .prog-ex-meta { font-size: 0.78rem; color: var(--text-3); }
 

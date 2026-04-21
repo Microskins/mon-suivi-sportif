@@ -249,8 +249,10 @@ document.addEventListener('DOMContentLoaded', function () {
             el.innerHTML += `
                 <div class="prog-exercise">
                     <div class="prog-ex-header">
-                        <span class="prog-ex-name">${ex.nom}</span>
-                        <button class="btn-yt-demo" onclick="window.openYoutubeModal('${nomEscaped}')">▶ Demo</button>
+                        <div class="prog-ex-left">
+                            <span class="prog-ex-name">${ex.nom}</span>
+                            <button class="btn-yt-demo" onclick="window.openYoutubeModal('${nomEscaped}')">▶ Demo</button>
+                        </div>
                         <span class="prog-ex-meta">${ex.tempo} · ${ex.repos}${weightStr ? ' · ' + weightStr : ''}</span>
                     </div>
                     <div class="prog-sets">${setsHtml}</div>
