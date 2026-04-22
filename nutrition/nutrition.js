@@ -37,9 +37,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getLatestBodyFat() {
         try {
-            const data = loadData('graisseCorporelleData');
-            if (!data.length) return null;
-            return [...data].sort((a, b) => b.date.localeCompare(a.date))[0].taux;
+            const settings = loadData('bodySettings', null);
+            const mensData = loadData('mensurationsData');
+            if (!settings?.taille || !mensData.length) return null;
+            const last = [...mensData].sort((a, b) => b.date.localeCompare(a.date))[0];
+            const { taille } = settings;
+            const { cou, tailleMens, hanches } = last;
+            const profiles = JSON.parse(localStorage.getItem('profiles') || '[]');
+            const currentId = localStorage.getItem('currentProfileId');
+            const sexe = profiles.find(p => p.id === currentId)?.sexe || 'homme';
+            if (!taille || !cou || !tailleMens) return null;
+            if (sexe === 'femme' && !hanches) return null;
+            if (tailleMens <= cou) return null;
+            let taux;
+            if (sexe === 'femme') {
+                if (tailleMens + hanches - cou <= 0) return null;
+                taux = 495 / (1.34803 - 0.35004 * Math.log10(tailleMens + hanches - cou) + 0.22100 * Math.log10(taille)) - 450;
+            } else {
+                taux = 495 / (1.04706 - 0.19077 * Math.log10(tailleMens - cou) + 0.15456 * Math.log10(taille)) - 450;
+            }
+            if (taux < 2 || taux > 70) return null;
+            return Math.round(taux * 10) / 10;
         } catch { return null; }
     }
 
