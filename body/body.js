@@ -432,6 +432,10 @@ document.addEventListener('DOMContentLoaded', function() {
     renderMensurations();
     renderMensurationsTable();
     window.addEventListener('suivi:dataChanged', () => {
+        const s = window.loadBodySettings();
+        document.getElementById('poids').value  = s?.poids  || '';
+        document.getElementById('taille').value = s?.taille || '';
+        document.getElementById('age').value    = s?.age    || '';
         renderDisplay();
         renderHistory();
         renderMensurations();
