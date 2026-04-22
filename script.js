@@ -514,9 +514,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 dashObjEl.innerHTML = '<p class="chart-empty">Aucun objectif actif — crée-en un dans l\'onglet Objectifs</p>';
             } else {
                 dashObjEl.innerHTML = actifs.map(o => {
-                    const pct = o.valeurCible > 0
-                        ? Math.min(100, Math.round((o.valeurActuelle / o.valeurCible) * 100))
-                        : 0;
+                    const dir = o.direction || 'max';
+                    let pct;
+                    if (dir === 'min') {
+                        const depart = o.valeurDepart ?? o.valeurActuelle;
+                        const range  = depart - o.valeurCible;
+                        pct = !range ? (o.valeurActuelle <= o.valeurCible ? 100 : 0)
+                                     : Math.max(0, Math.min(100, Math.round(((depart - o.valeurActuelle) / range) * 100)));
+                    } else {
+                        pct = o.valeurCible > 0
+                            ? Math.min(100, Math.round((o.valeurActuelle / o.valeurCible) * 100))
+                            : 0;
+                    }
                     const jours = o.dateFin
                         ? Math.max(0, Math.ceil((new Date(o.dateFin) - new Date()) / 86400000))
                         : null;
