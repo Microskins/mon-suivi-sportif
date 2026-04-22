@@ -173,15 +173,6 @@ document.addEventListener('DOMContentLoaded', function() {
             bmrLabel = 'BMR (Mifflin)';
         }
 
-        // Taux de gras (stat card)
-        let graisseCard = '';
-        if (graisseData.length > 0) {
-            const lastTaux = [...graisseData].sort((a, b) => b.date.localeCompare(a.date))[0].taux;
-            const sexe = getSexe();
-            const cat = bodyFatCategorie(lastTaux, sexe);
-            graisseCard = `<div class="stat-card"><span class="stat-val ${cat.cls}">${lastTaux}%</span><span class="stat-lbl">Taux de gras — ${cat.label}</span></div>`;
-        }
-
         // RTH
         let rthCard = '';
         const mensData = loadData('mensurationsData');
@@ -200,13 +191,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        const hasExtra = !!(graisseCard || rthCard);
         bodyDataDisplay.innerHTML = `
-            <div class="body-stats${hasExtra ? ' has-rth' : ''}">
+            <div class="body-stats${rthCard ? ' has-rth' : ''}">
                 <div class="stat-card"><span class="stat-val">${age} ans</span><span class="stat-lbl">Âge</span></div>
                 <div class="stat-card"><span class="stat-val">${imc}</span><span class="stat-lbl">IMC — ${imcCategorie(parseFloat(imc))}</span></div>
                 <div class="stat-card"><span class="stat-val">${bmr} kcal</span><span class="stat-lbl">${bmrLabel}</span></div>
-                ${graisseCard}
                 ${rthCard}
             </div>
         `;
