@@ -6,6 +6,7 @@
 // DB_HOST      : variable d'env DB_HOST (défaut 192.168.1.6)
 // ─────────────────────────────────────────────────────────────────────────────
 
+const path = require('path');
 const express = require('express');
 const https   = require('https');
 const { Pool } = require('pg');
@@ -28,6 +29,7 @@ pool.connect()
     .then(() => console.log('PostgreSQL : ✓ connecté'))
     .catch(e => console.error('PostgreSQL : ✗ erreur de connexion', e.message));
 
+app.use(express.static(path.join(__dirname)));
 app.use(express.json({ limit: '5mb', strict: false }));
 
 // ── Config publique (pas de token requis) ─────────────────────────────────────
