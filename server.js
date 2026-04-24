@@ -73,27 +73,17 @@ app.get('/api/:profileId/:key', async (req, res) => {
 // ── POST /api/:profileId/:key — écrire une clé (upsert) ──────────────────────
 app.post('/api/:profileId/:key', async (req, res) => {
     try {
-        // Crée le profil s'il n'existe pas encore
-        await pool.query(`
-            INSERT INTO profiles (id, name)
-            VALUES ($1, $1)
-            ON CONFLICT (id) DO NOTHING
-        `, [req.params.profileId]);
-
-        // Upsert de la donnée
         await pool.query(`
             INSERT INTO profile_data (profile_id, key, value, updated_at)
             VALUES ($1, $2, $3, now())
             ON CONFLICT (profile_id, key) DO UPDATE
                 SET value = EXCLUDED.value, updated_at = now()
         `, [req.params.profileId, req.params.key, JSON.stringify(req.body)]);
-
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
-
 // ── POST /api/ai — proxy Anthropic ────────────────────────────────────────────
 app.post('/api/ai', (req, res) => {
     if (!ANTHROPIC_KEY) {
@@ -122,6 +112,39 @@ app.post('/api/ai', (req, res) => {
     apiReq.on('error', e => res.status(500).json({ error: e.message }));
     apiReq.write(body);
     apiReq.end();
+});
+
+// ── GET /api/_global/profiles — lire tous les profils ────────────────────────
+app.get('/api/_global/profiles', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            'SELECT id, name, emoji, pin FROM profiles ORDER BY created_at ASC'
+        );
+        res.json(rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── POST /api/_global/profiles — sauvegarder tous les profils ────────────────
+app.post('/api/_global/profiles', async (req, res) => {
+    const profiles = req.body;
+    if (!Array.isArray(profiles)) return res.status(400).json({ error: 'Tableau attendu' });
+    try {
+        for (const p of profiles) {
+            await pool.query(`
+                INSERT INTO profiles (id, name, emoji, pin)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (id) DO UPDATE
+                    SET name  = EXCLUDED.name,
+                        emoji = EXCLUDED.emoji,
+                        pin   = EXCLUDED.pin
+            `, [p.id, p.name || p.id, p.emoji || '💪', p.pin || null]);
+        }
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.listen(PORT, () => {
