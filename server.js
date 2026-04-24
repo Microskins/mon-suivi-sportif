@@ -73,12 +73,21 @@ app.get('/api/:profileId/:key', async (req, res) => {
 // ── POST /api/:profileId/:key — écrire une clé (upsert) ──────────────────────
 app.post('/api/:profileId/:key', async (req, res) => {
     try {
+        // Crée le profil s'il n'existe pas encore
+        await pool.query(`
+            INSERT INTO profiles (id, name)
+            VALUES ($1, $1)
+            ON CONFLICT (id) DO NOTHING
+        `, [req.params.profileId]);
+
+        // Upsert de la donnée
         await pool.query(`
             INSERT INTO profile_data (profile_id, key, value, updated_at)
             VALUES ($1, $2, $3, now())
             ON CONFLICT (profile_id, key) DO UPDATE
                 SET value = EXCLUDED.value, updated_at = now()
         `, [req.params.profileId, req.params.key, JSON.stringify(req.body)]);
+
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
