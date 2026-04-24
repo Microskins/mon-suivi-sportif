@@ -3,6 +3,7 @@
 // PORT         : variable d'env PORT (défaut 3001)
 // TOKEN        : variable d'env TOKEN (défaut 'changeme' — À CHANGER)
 // DB_PASSWORD  : variable d'env DB_PASSWORD (mot de passe PostgreSQL)
+// DB_HOST      : variable d'env DB_HOST (défaut 192.168.1.6)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const express = require('express');
@@ -16,11 +17,11 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 
 // ── Connexion PostgreSQL ──────────────────────────────────────────────────────
 const pool = new Pool({
-    host:     '192.168.1.6',
-    database: 'suivi_sportif',
-    user:     'suivi',
+    host:     process.env.DB_HOST     || '192.168.1.6',
+    database: process.env.DB_NAME     || 'suivi_sportif',
+    user:     process.env.DB_USER     || 'suivi',
     password: process.env.DB_PASSWORD,
-    port:     5432,
+    port:     process.env.DB_PORT     || 5432,
 });
 
 pool.connect()
@@ -40,6 +41,41 @@ app.use('/api', (req, res, next) => {
         return res.status(401).json({ error: 'Token invalide' });
     }
     next();
+});
+
+// ── GET /api/_global/profiles — lire tous les profils ────────────────────────
+app.get('/api/_global/profiles', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            'SELECT id, name, emoji, pin FROM profiles ORDER BY created_at ASC'
+        );
+        res.json(rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── POST /api/_global/profiles — sauvegarder tous les profils ────────────────
+app.post('/api/_global/profiles', async (req, res) => {
+    const profiles = req.body;
+    if (!Array.isArray(profiles)) {
+        return res.status(400).json({ error: 'Tableau de profils attendu' });
+    }
+    try {
+        for (const p of profiles) {
+            await pool.query(`
+                INSERT INTO profiles (id, name, emoji, pin)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (id) DO UPDATE
+                    SET name  = EXCLUDED.name,
+                        emoji = EXCLUDED.emoji,
+                        pin   = EXCLUDED.pin
+            `, [p.id, p.name || p.id, p.emoji || '💪', p.pin || null]);
+        }
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ── GET /api/:profileId — toutes les clés d'un profil ────────────────────────
@@ -84,6 +120,7 @@ app.post('/api/:profileId/:key', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
 // ── POST /api/ai — proxy Anthropic ────────────────────────────────────────────
 app.post('/api/ai', (req, res) => {
     if (!ANTHROPIC_KEY) {
@@ -112,39 +149,6 @@ app.post('/api/ai', (req, res) => {
     apiReq.on('error', e => res.status(500).json({ error: e.message }));
     apiReq.write(body);
     apiReq.end();
-});
-
-// ── GET /api/_global/profiles — lire tous les profils ────────────────────────
-app.get('/api/_global/profiles', async (req, res) => {
-    try {
-        const { rows } = await pool.query(
-            'SELECT id, name, emoji, pin FROM profiles ORDER BY created_at ASC'
-        );
-        res.json(rows);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// ── POST /api/_global/profiles — sauvegarder tous les profils ────────────────
-app.post('/api/_global/profiles', async (req, res) => {
-    const profiles = req.body;
-    if (!Array.isArray(profiles)) return res.status(400).json({ error: 'Tableau attendu' });
-    try {
-        for (const p of profiles) {
-            await pool.query(`
-                INSERT INTO profiles (id, name, emoji, pin)
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (id) DO UPDATE
-                    SET name  = EXCLUDED.name,
-                        emoji = EXCLUDED.emoji,
-                        pin   = EXCLUDED.pin
-            `, [p.id, p.name || p.id, p.emoji || '💪', p.pin || null]);
-        }
-        res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
 });
 
 app.listen(PORT, () => {
