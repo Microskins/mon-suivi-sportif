@@ -25,21 +25,6 @@
   "point_positif": "string (encouragement personnalisé)"
 }`;
 
-    function currentProfileId() {
-        return localStorage.getItem('currentProfileId') || '_default';
-    }
-
-    function loadData(key, def) {
-        try {
-            const raw = localStorage.getItem('profile_' + currentProfileId() + '_' + key);
-            return raw ? JSON.parse(raw) : def;
-        } catch (_) { return def; }
-    }
-
-    function saveData(key, data) {
-        localStorage.setItem('profile_' + currentProfileId() + '_' + key, JSON.stringify(data));
-    }
-
     function fmtMinutes(min) {
         if (!min) return '?';
         return Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0');

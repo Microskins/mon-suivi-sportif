@@ -26,8 +26,8 @@ const pool = new Pool({
 });
 
 pool.connect()
-    .then(() => console.log('PostgreSQL : ✓ connecté'))
-    .catch(e => console.error('PostgreSQL : ✗ erreur de connexion', e.message));
+    .then(client => { client.release(); console.log('PostgreSQL : ✓ connecté'); })
+    .catch(e => { console.error('PostgreSQL : ✗ erreur de connexion —', e.message); console.error('Vérifiez DB_HOST, DB_NAME, DB_USER, DB_PASSWORD dans votre .env'); });
 
 app.use(express.static(path.join(__dirname)));
 app.use(express.json({ limit: '5mb', strict: false }));
@@ -35,6 +35,16 @@ app.use(express.json({ limit: '5mb', strict: false }));
 // ── Config publique (pas de token requis) ─────────────────────────────────────
 app.get('/api/config', (req, res) => {
     res.json({ token: TOKEN });
+});
+
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/api/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ ok: true, db: true });
+    } catch (e) {
+        res.status(503).json({ ok: false, db: false, error: e.message });
+    }
 });
 
 // ── Authentification ──────────────────────────────────────────────────────────
@@ -117,6 +127,16 @@ app.post('/api/:profileId/:key', async (req, res) => {
             ON CONFLICT (profile_id, key) DO UPDATE
                 SET value = EXCLUDED.value, updated_at = now()
         `, [req.params.profileId, req.params.key, JSON.stringify(req.body)]);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── DELETE /api/_global/profiles/:profileId — supprimer un profil ────────────
+app.delete('/api/_global/profiles/:profileId', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM profiles WHERE id = $1', [req.params.profileId]);
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });

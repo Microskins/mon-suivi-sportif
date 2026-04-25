@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!wrap || !activeType) return;
 
         const plan = PLANS[activeType];
-        const activePlanData = JSON.parse(localStorage.getItem('nutritionPlan') || 'null');
+        const activePlanData = loadData('nutritionPlan', null);
         const isActive = activePlanData?.type === activeType;
 
         wrap.innerHTML = `
@@ -164,9 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.getElementById('btnActivatePlan')?.addEventListener('click', () => {
             const plan = { type: activeType, startDate: new Date().toISOString().split('T')[0], week: 1 };
-            localStorage.setItem('nutritionPlan', JSON.stringify(plan));
-            const pid = localStorage.getItem('currentProfileId');
-            if (pid) localStorage.setItem(`profile_${pid}_nutritionPlan`, JSON.stringify(plan));
+            saveData('nutritionPlan', plan);
             renderPlan();
             showFeedback(document.getElementById('nutritionFeedback'), 'Plan activé ! Il sera affiché dans l\'onglet Repas.');
         });

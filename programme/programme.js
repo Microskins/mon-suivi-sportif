@@ -133,14 +133,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── État ──────────────────────────────────────────────────────────────────
 
     function loadState() {
-        try { return JSON.parse(localStorage.getItem('programmeState') || 'null') || { type: 'pdc', week: 1, day: 0, rms: {}, checked: {} }; }
+        try { return loadData('programmeState', null) || { type: 'pdc', week: 1, day: 0, rms: {}, checked: {} }; }
         catch { return { type: 'pdc', week: 1, day: 0, rms: {}, checked: {} }; }
     }
 
     function saveState(s) {
-        localStorage.setItem('programmeState', JSON.stringify(s));
-        const pid = localStorage.getItem('currentProfileId');
-        if (pid) localStorage.setItem(`profile_${pid}_programmeState`, JSON.stringify(s));
+        saveData('programmeState', s);
     }
 
     let state = loadState();

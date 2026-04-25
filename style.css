@@ -260,7 +260,7 @@ h3 {
     border: 1.5px solid var(--border);
     border-radius: var(--r-md);
     box-shadow: var(--shadow-lg);
-    min-width: 210px;
+    min-width: 400px;
     z-index: 500;
     overflow: hidden;
     display: none;
@@ -1786,7 +1786,7 @@ html, body { height: 100%; margin: 0; }
 .sidebar-bottom .profile-chevron { display: none; }
 
 .sidebar-bottom .profile-dropdown {
-    left: 68px;
+    left: 80px;
     bottom: 8px;
     top: auto;
 }

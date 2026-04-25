@@ -812,6 +812,18 @@ document.addEventListener('DOMContentLoaded', function () {
             row.appendChild(exp);
             row.appendChild(push);
             row.appendChild(cfg);
+
+            if (p.id === currentId) {
+                const del = document.createElement('button');
+                del.title = 'Supprimer ce profil';
+                del.style.cssText = btnStyle;
+                del.textContent = '🗑';
+                del.addEventListener('mouseenter', () => del.style.color = 'var(--error)');
+                del.addEventListener('mouseleave', () => del.style.color = 'var(--text-3)');
+                del.addEventListener('click', (e) => { e.stopPropagation(); closeProfileDropdown(); deleteProfile(p.id); });
+                row.appendChild(del);
+            }
+
             list.appendChild(row);
         });
     }
@@ -935,6 +947,47 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    async function deleteProfile(profileId) {
+        const profiles = getProfiles();
+        if (profiles.length <= 1) {
+            openInfoModal('Suppression impossible', '<p>Tu ne peux pas supprimer ton seul profil.</p>');
+            return;
+        }
+        const profile = profiles.find(p => p.id === profileId);
+        if (!profile) return;
+        if (!confirm(`Supprimer définitivement le profil "${profile.name}" et toutes ses données ? Cette action est irréversible.`)) return;
+
+        // Supprimer toutes les clés localStorage du profil
+        PROFILE_DATA_KEYS.forEach(k => {
+            localStorage.removeItem(`profile_${profileId}_${k}`);
+            localStorage.removeItem(k);
+        });
+
+        // Retirer de la liste des profils
+        const updated = profiles.filter(p => p.id !== profileId);
+        localStorage.setItem('profiles', JSON.stringify(updated));
+
+        // Basculer vers un autre profil
+        const next = updated[0];
+        localStorage.setItem('currentProfileId', next.id);
+        restoreFromProfile(next.id);
+        renderProfileUI();
+        updateDashboard();
+        window.dispatchEvent(new CustomEvent('suivi:dataChanged'));
+
+        // Supprimer sur le serveur
+        const token = localStorage.getItem('serverToken');
+        if (token) {
+            try {
+                await fetch(`/api/_global/profiles/${profileId}`, {
+                    method: 'DELETE',
+                    headers: { 'x-token': token }
+                });
+                syncProfilesToServer();
+            } catch (_) {}
+        }
+    }
+
     document.getElementById('profileBtn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         const dd = document.getElementById('profileDropdown');
@@ -967,13 +1020,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Sync serveur ─────────────────────────────────────────────────────────
 
-    function updateServerStatus(connected) {
+    function updateServerStatus(connected, errorMsg) {
         const dot = document.getElementById('serverStatusDot');
         const btn = document.getElementById('serverStatusBtn');
         if (!dot || !btn) return;
-        dot.title            = connected ? 'Serveur connecté' : 'Serveur non disponible';
-        dot.style.background = connected ? 'var(--success)' : 'var(--error)';
-        // Cacher si connecté, afficher si erreur ou pas de token
+        if (connected) {
+            dot.title            = 'Serveur connecté';
+            dot.style.background = 'var(--success)';
+        } else {
+            const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            dot.title            = `Erreur sync ${time}${errorMsg ? ' — ' + errorMsg : ''}`;
+            dot.style.background = 'var(--error)';
+        }
         const hasToken = !!localStorage.getItem('serverToken');
         btn.style.display = (!hasToken || !connected) ? '' : 'none';
     }
@@ -988,8 +1046,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: { 'Content-Type': 'application/json', 'x-token': token },
                 body:    JSON.stringify(data)
             });
-            updateServerStatus(res.ok);
-        } catch (_) { updateServerStatus(false); }
+            updateServerStatus(res.ok, res.ok ? null : `HTTP ${res.status}`);
+        } catch (e) { updateServerStatus(false, e.message); }
     }
 
     async function syncProfilesToServer() {
